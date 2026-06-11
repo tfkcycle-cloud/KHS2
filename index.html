@@ -628,7 +628,7 @@
 // ════════════════════════════════════════
 //  CONFIG — 填入你的 Apps Script Web App URL
 // ════════════════════════════════════════
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwD3219IZ5NiaMCHWzADH6nV_B9jY-Xa30gBJy47Gq_S6GbwnZJrnCqoFlKBve6nCAMGQ/exec';
+let GAS_URL = localStorage.getItem('gas_url') || '';
 
 const PASSWORD = 'admin1234'; // 預設密碼
 
@@ -818,16 +818,24 @@ async function submitItem() {
   if (!name) { showToast('請輸入品項名稱', 'error'); return; }
   if (!qty && qty !== '0') { showToast('請輸入數量', 'error'); return; }
 
-  const payload = { action: 'add', name, qty: Number(qty), price: Number(price)||0, note, imageBase64: imageBase64||'' };
-
   const btn = document.querySelector('.btn-submit');
   btn.textContent = '新增中…'; btn.disabled = true;
 
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    // 圖片轉純 base64（去掉 data:image/...;base64, 前綴）
+    let imgData = '';
+    if (imageBase64) {
+      imgData = imageBase64.split(',')[1] || '';
+    }
+    const params = new URLSearchParams({
+      action: 'add',
+      name,
+      qty: Number(qty),
+      price: Number(price)||0,
+      note,
+      image: imgData
     });
+    const res = await fetch(`${GAS_URL}?${params.toString()}`);
     const data = await res.json();
     if (data.success) {
       showToast('新增成功！', 'success');
@@ -851,10 +859,7 @@ async function deleteItem(id, name) {
   if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
 
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'delete', id })
-    });
+    const res = await fetch(`${GAS_URL}?action=delete&id=${encodeURIComponent(id)}`);
     const data = await res.json();
     if (data.success) {
       showToast('已刪除「' + name + '」', 'success');

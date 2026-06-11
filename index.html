@@ -372,6 +372,32 @@
 let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyyMryoTP2fzwHfP2UlXsSDaauGLVSufaULJ3Fag6jIsSvJ8Z4K-pPTwg0bCqjIFBXV6A/exec';
 const PASSWORD = 'admin1234';
 
+/* =========================
+   🧠 安全工具（新增）
+========================= */
+async function safeFetchJSON(url, options = {}) {
+  try {
+    const res = await fetch(url, options);
+
+    if (!res.ok) {
+      throw new Error(`HTTP錯誤：${res.status}`);
+    }
+
+    const text = await res.text();
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("❌ JSON解析失敗，原始回傳：", text);
+      throw new Error("API沒有回傳JSON");
+    }
+
+  } catch (err) {
+    console.error("❌ fetch失敗：", err);
+    throw err;
+  }
+}
+
 // ── LOGIN ──
 document.getElementById('pwd-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
@@ -415,17 +441,17 @@ let allItems = [];
 let imageBase64 = null;
 let editingId = null;
 
-// ── LOAD ──
+// ── LOAD（已強化） ──
 async function loadItems() {
   if (!GAS_URL) return;
   setLoading(true);
 
   try {
-    const res = await fetch(`${GAS_URL}?action=getAll`);
-    const data = await res.json();
+    const data = await safeFetchJSON(`${GAS_URL}?action=getAll`);
 
     allItems = data.items || [];
     renderAll(allItems);
+
   } catch (e) {
     showToast('讀取失敗：' + e.message, 'error');
   }
@@ -440,16 +466,17 @@ function setLoading(on) {
   }
 }
 
-// ── RENDER（原本不動） ──
+// ── RENDER ──
 function renderAll(items) {
   renderTable(items);
   renderCards(items);
   updateStats(items);
 }
 
-/* ===== 你的 renderTable / renderCards / updateStats / filterItems 原封不動 ===== */
+/* =========================
+   MODAL
+========================= */
 
-// ── MODAL（原本不動） ──
 function openModal() {
   editingId = null;
   document.getElementById('modal-title').textContent = '新增品項';
@@ -468,9 +495,9 @@ function openEdit(id) {
   document.getElementById('modal-title').textContent = '編輯品項';
   document.getElementById('modal-submit-btn').textContent = '儲存變更';
 
-  document.getElementById('f-name').value = item.name;
-  document.getElementById('f-qty').value = item.qty;
-  document.getElementById('f-price').value = item.price;
+  document.getElementById('f-name').value = item.name || '';
+  document.getElementById('f-qty').value = item.qty || 0;
+  document.getElementById('f-price').value = item.price || 0;
   document.getElementById('f-note').value = item.note || '';
 
   if (item.imageUrl) {
@@ -498,7 +525,7 @@ function resetForm() {
   removeImage();
 }
 
-// ── IMAGE（不動） ──
+// ── IMAGE（加強安全） ──
 function handleImageSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -510,11 +537,13 @@ function handleImageSelect(e) {
 
   const reader = new FileReader();
   reader.onload = ev => {
-    imageBase64 = ev.target.result;
+    imageBase64 = ev.target.result || null;
+
     document.getElementById('preview-img').src = imageBase64;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
   };
+
   reader.readAsDataURL(file);
 }
 
@@ -525,7 +554,7 @@ function removeImage() {
   document.getElementById('upload-area').style.display = 'block';
 }
 
-// ── ✅ SUBMIT（已改 POST JSON） ──
+// ── SUBMIT（重大修正） ──
 async function submitItem() {
   if (!GAS_URL) return showToast('請先設定 URL', 'error');
 
@@ -554,13 +583,11 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    const res = await fetch(GAS_URL, {
+    await safeFetchJSON(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    const result = await res.json();
 
     showToast(isEdit ? '已更新！' : '新增成功！', 'success');
     closeModal();
@@ -574,12 +601,12 @@ async function submitItem() {
   }
 }
 
-// ── ✅ DELETE（已改 POST JSON） ──
+// ── DELETE（修正） ──
 async function deleteItem(id, name) {
   if (!confirm(`確定刪除「${name}」？`)) return;
 
   try {
-    const res = await fetch(GAS_URL, {
+    await safeFetchJSON(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -587,8 +614,6 @@ async function deleteItem(id, name) {
         id
       })
     });
-
-    const result = await res.json();
 
     showToast(`已刪除 ${name}`, 'success');
     loadItems();

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>庫存系統</title>
+<style>
+body { font-family: Arial; padding: 20px; background:#f5f5f5; }
+input, button { margin: 5px; padding: 8px; }
+.box { background:white; padding:15px; margin-top:10px; border-radius:8px; }
+.item { padding:10px; border-bottom:1px solid #ddd; }
+button { cursor:pointer; }
+</style>
+</head>
+
+<body>
+
+<!-- 登入 -->
+<div id="loginBox" class="box">
+  <h2>登入系統</h2>
+  <input id="user" placeholder="帳號"><br>
+  <input id="pass" type="password" placeholder="密碼"><br>
+  <button onclick="login()">登入</button>
+</div>
+
+<!-- 主系統 -->
+<div id="app" style="display:none">
+
+  <div class="box">
+    <h3>新增品項</h3>
+    <input id="name" placeholder="名稱"><br>
+    <input id="qty" placeholder="數量"><br>
+    <input id="price" placeholder="價格"><br>
+    <input id="note" placeholder="備註"><br>
+    <button onclick="addItem()">新增</button>
+  </div>
+
+  <div class="box">
+    <h3>搜尋</h3>
+    <input id="searchKey" placeholder="輸入名稱">
+    <button onclick="search()">搜尋</button>
+  </div>
+
+  <div id="result" class="box"></div>
+
+</div>
+
+<script>
+
+const API_URL = "你的AppsScript網址"; // ⚠️記得換
+
+// 🔐 前端登入（只是保護UI，不是真安全）
+function login() {
+  const u = document.getElementById("user").value;
+  const p = document.getElementById("pass").value;
+
+  if (u === "admin" && p === "123456") {
+    loginBox.style.display = "none";
+    app.style.display = "block";
+  } else {
+    alert("帳號或密碼錯誤");
+  }
+}
+
+// ➕ 新增
+function addItem() {
+  fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "add",
+      name: name.value,
+      qty: qty.value,
+      price: price.value,
+      note: note.value
+    })
+  }).then(() => {
+    alert("新增成功");
+  });
+}
+
+// 🔎 搜尋
+function search() {
+  fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "search",
+      keyword: searchKey.value
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    let html = "";
+
+    data.data.forEach(item => {
+      html += `
+        <div class="item">
+          📌 名稱：${item[1]} |
+          數量：${item[2]} |
+          價格：${item[3]} |
+          備註：${item[4]}
+          <button onclick="del(${item[0]})">刪除</button>
+        </div>
+      `;
+    });
+
+    result.innerHTML = html;
+  });
+}
+
+// ❌ 刪除
+function del(id) {
+  fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "delete",
+      id
+    })
+  }).then(() => {
+    alert("已刪除");
+    search();
+  });
+}
+
+</script>
+
+</body>
+</html>

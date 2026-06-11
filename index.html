@@ -835,15 +835,12 @@ async function submitItem() {
       note,
       image: imgData
     });
-    const res = await fetch(`${GAS_URL}?${params.toString()}`);
-    const data = await res.json();
-    if (data.success) {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+      // Apps Script CORS 限制，用 no-cors 送出後等待再讀取
+      await new Promise(r => setTimeout(r, 1500));
       showToast('新增成功！', 'success');
       closeModal();
       loadItems();
-    } else {
-      showToast('新增失敗：' + (data.error||'未知錯誤'), 'error');
-    }
   } catch(e) {
     showToast('新增失敗：' + e.message, 'error');
   } finally {

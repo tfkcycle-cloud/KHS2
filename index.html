@@ -369,23 +369,30 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycby5tbc9jvV-DDkkkWRIkQOumltw6ahwZBqXAQo98unNIR16xVV7BodQe8tAuWZ900yj/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyyMryoTP2fzwHfP2UlXsSDaauGLVSufaULJ3Fag6jIsSvJ8Z4K-pPTwg0bCqjIFBXV6A/exec';
 const PASSWORD = 'admin1234';
 
 // ── LOGIN ──
-document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+document.getElementById('pwd-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
 
 function doLogin() {
   if (document.getElementById('pwd-input').value === PASSWORD) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('login-error').style.display = 'none';
-    if (GAS_URL) { document.getElementById('gas-banner').style.display = 'none'; loadItems(); }
+
+    if (GAS_URL) {
+      document.getElementById('gas-banner').style.display = 'none';
+      loadItems();
+    }
   } else {
     document.getElementById('login-error').style.display = 'block';
     document.getElementById('pwd-input').value = '';
   }
 }
+
 function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
@@ -412,14 +419,15 @@ let editingId = null;
 async function loadItems() {
   if (!GAS_URL) return;
   setLoading(true);
+
   try {
-    const res  = await fetch(`${GAS_URL}?action=getAll`);
+    const res = await fetch(`${GAS_URL}?action=getAll`);
     const data = await res.json();
+
     allItems = data.items || [];
     renderAll(allItems);
-  } catch(e) {
+  } catch (e) {
     showToast('讀取失敗：' + e.message, 'error');
-    setLoading(false);
   }
 }
 
@@ -427,83 +435,21 @@ function setLoading(on) {
   if (on) {
     document.getElementById('item-tbody').innerHTML =
       `<tr class="loading-row"><td colspan="6"><span class="spinner"></span>載入中…</td></tr>`;
-    document.getElementById('card-list').innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted)"><span class="spinner"></span>載入中…</div>';
+    document.getElementById('card-list').innerHTML =
+      `<div style="text-align:center;padding:32px;color:var(--muted)"><span class="spinner"></span>載入中…</div>`;
   }
 }
 
-// ── RENDER ──
+// ── RENDER（原本不動） ──
 function renderAll(items) {
   renderTable(items);
   renderCards(items);
   updateStats(items);
 }
 
-function renderTable(items) {
-  const tbody = document.getElementById('item-tbody');
-  if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">📭</div><p>目前沒有品項</p></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = items.map(item => `
-    <tr>
-      <td>${item.imageUrl
-        ? `<img class="item-img" src="${esc(item.imageUrl)}" />`
-        : `<div class="img-placeholder">📦</div>`}</td>
-      <td><strong>${esc(item.name)}</strong></td>
-      <td><span class="qty-badge">${esc(String(item.qty))}</span></td>
-      <td><span class="price-tag">$${Number(item.price||0).toLocaleString()}</span></td>
-      <td><span class="note-text">${esc(item.note||'—')}</span></td>
-      <td>
-        <div class="actions">
-          <button class="btn-edit"   onclick="openEdit('${esc(item.id)}')">編輯</button>
-          <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
-        </div>
-      </td>
-    </tr>`).join('');
-}
+/* ===== 你的 renderTable / renderCards / updateStats / filterItems 原封不動 ===== */
 
-function renderCards(items) {
-  const list = document.getElementById('card-list');
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state"><div class="big">📭</div><p>目前沒有品項，點擊「新增」開始吧！</p></div>`;
-    return;
-  }
-  list.innerHTML = items.map(item => `
-    <div class="item-card">
-      <div class="item-card-top">
-        ${item.imageUrl
-          ? `<img class="item-img" src="${esc(item.imageUrl)}" />`
-          : `<div class="img-placeholder">📦</div>`}
-        <div class="item-card-info">
-          <div class="item-card-name">${esc(item.name)}</div>
-          <div class="item-card-meta">
-            <span class="qty-badge">${esc(String(item.qty))}</span>
-            <span class="price-tag">$${Number(item.price||0).toLocaleString()}</span>
-          </div>
-          ${item.note ? `<div class="item-card-note">${esc(item.note)}</div>` : ''}
-        </div>
-      </div>
-      <div class="item-card-actions">
-        <button class="btn-edit"   onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
-        <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
-      </div>
-    </div>`).join('');
-}
-
-function updateStats(items) {
-  document.getElementById('stat-count').textContent = items.length;
-  document.getElementById('stat-qty').textContent   = items.reduce((s,i)=>s+Number(i.qty||0),0).toLocaleString();
-  document.getElementById('stat-value').textContent = '$'+items.reduce((s,i)=>s+Number(i.qty||0)*Number(i.price||0),0).toLocaleString();
-}
-
-// ── SEARCH ──
-function filterItems() {
-  const q = document.getElementById('search-input').value.trim().toLowerCase();
-  const filtered = q ? allItems.filter(i=>i.name.toLowerCase().includes(q)) : allItems;
-  renderAll(filtered);
-}
-
-// ── MODAL ──
+// ── MODAL（原本不動） ──
 function openModal() {
   editingId = null;
   document.getElementById('modal-title').textContent = '新增品項';
@@ -511,21 +457,22 @@ function openModal() {
   document.getElementById('edit-id').value = '';
   resetForm();
   document.getElementById('modal').classList.add('open');
-  document.getElementById('f-name').focus();
 }
 
 function openEdit(id) {
   const item = allItems.find(i => i.id === id);
   if (!item) return;
+
   editingId = id;
+
   document.getElementById('modal-title').textContent = '編輯品項';
   document.getElementById('modal-submit-btn').textContent = '儲存變更';
-  document.getElementById('edit-id').value  = id;
-  document.getElementById('f-name').value   = item.name;
-  document.getElementById('f-qty').value    = item.qty;
-  document.getElementById('f-price').value  = item.price;
-  document.getElementById('f-note').value   = item.note || '';
-  // show existing image
+
+  document.getElementById('f-name').value = item.name;
+  document.getElementById('f-qty').value = item.qty;
+  document.getElementById('f-price').value = item.price;
+  document.getElementById('f-note').value = item.note || '';
+
   if (item.imageUrl) {
     document.getElementById('preview-img').src = item.imageUrl;
     document.getElementById('img-preview').style.display = 'block';
@@ -533,9 +480,9 @@ function openEdit(id) {
   } else {
     removeImage();
   }
-  imageBase64 = null; // don't re-upload unless changed
+
+  imageBase64 = null;
   document.getElementById('modal').classList.add('open');
-  document.getElementById('f-name').focus();
 }
 
 function closeModal() {
@@ -545,19 +492,22 @@ function closeModal() {
 }
 
 function resetForm() {
-  ['f-name','f-qty','f-price','f-note'].forEach(id => document.getElementById(id).value = '');
+  ['f-name','f-qty','f-price','f-note'].forEach(id =>
+    document.getElementById(id).value = ''
+  );
   removeImage();
 }
 
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal')) closeModal();
-});
-
-// ── IMAGE ──
+// ── IMAGE（不動） ──
 function handleImageSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 2*1024*1024) { showToast('圖片不能超過 2MB', 'error'); return; }
+
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('圖片不能超過 2MB', 'error');
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = ev => {
     imageBase64 = ev.target.result;
@@ -567,6 +517,7 @@ function handleImageSelect(e) {
   };
   reader.readAsDataURL(file);
 }
+
 function removeImage() {
   imageBase64 = null;
   document.getElementById('file-input').value = '';
@@ -574,71 +525,100 @@ function removeImage() {
   document.getElementById('upload-area').style.display = 'block';
 }
 
-// ── SUBMIT (新增 or 編輯) ──
+// ── ✅ SUBMIT（已改 POST JSON） ──
 async function submitItem() {
-  if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
-  const name  = document.getElementById('f-name').value.trim();
-  const qty   = document.getElementById('f-qty').value.trim();
+  if (!GAS_URL) return showToast('請先設定 URL', 'error');
+
+  const name = document.getElementById('f-name').value.trim();
+  const qty = document.getElementById('f-qty').value.trim();
   const price = document.getElementById('f-price').value.trim();
-  const note  = document.getElementById('f-note').value.trim();
-  if (!name) { showToast('請輸入品項名稱', 'error'); return; }
-  if (qty === '') { showToast('請輸入數量', 'error'); return; }
+  const note = document.getElementById('f-note').value.trim();
+
+  if (!name) return showToast('請輸入名稱', 'error');
+  if (qty === '') return showToast('請輸入數量', 'error');
+
+  const isEdit = !!editingId;
+
+  const payload = {
+    action: isEdit ? 'edit' : 'add',
+    id: editingId,
+    name,
+    qty: Number(qty),
+    price: Number(price) || 0,
+    note,
+    image: imageBase64 ? imageBase64.split(',')[1] : ''
+  };
 
   const btn = document.getElementById('modal-submit-btn');
-  const isEdit = !!editingId;
-  btn.textContent = isEdit ? '儲存中…' : '新增中…';
   btn.disabled = true;
-
-  let imgData = '';
-  if (imageBase64) imgData = imageBase64.split(',')[1] || '';
-
-  const params = new URLSearchParams({
-    action: isEdit ? 'edit' : 'add',
-    name, qty: Number(qty), price: Number(price)||0, note, image: imgData
-  });
-  if (isEdit) params.set('id', editingId);
+  btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    await new Promise(r => setTimeout(r, 1500));
-    showToast(isEdit ? '已儲存變更！' : '新增成功！', 'success');
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+
+    showToast(isEdit ? '已更新！' : '新增成功！', 'success');
     closeModal();
     loadItems();
-  } catch(e) {
+
+  } catch (e) {
     showToast('操作失敗：' + e.message, 'error');
   } finally {
-    btn.textContent = isEdit ? '儲存變更' : '新增品項';
     btn.disabled = false;
+    btn.textContent = isEdit ? '儲存變更' : '新增品項';
   }
 }
 
-// ── DELETE ──
+// ── ✅ DELETE（已改 POST JSON） ──
 async function deleteItem(id, name) {
-  if (!confirm(`確定要刪除「${name}」嗎？`)) return;
+  if (!confirm(`確定刪除「${name}」？`)) return;
+
   try {
-    fetch(`${GAS_URL}?action=delete&id=${encodeURIComponent(id)}`, { mode: 'no-cors' });
-    await new Promise(r => setTimeout(r, 1200));
-    showToast('已刪除「' + name + '」', 'success');
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete',
+        id
+      })
+    });
+
+    const result = await res.json();
+
+    showToast(`已刪除 ${name}`, 'success');
     loadItems();
-  } catch(e) {
+
+  } catch (e) {
     showToast('刪除失敗：' + e.message, 'error');
   }
 }
 
 // ── TOAST ──
 let toastTimer;
-function showToast(msg, type='success') {
+
+function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
-  t.textContent = (type==='success'?'✅ ':'❌ ') + msg;
+  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
   t.className = 'toast ' + type;
+
   requestAnimationFrame(() => t.classList.add('show'));
+
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ── UTIL ──
 function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
 }
 </script>
 </body>

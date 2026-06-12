@@ -231,6 +231,12 @@
       display: flex; align-items: center; justify-content: center;
     }
 
+    /* PROGRESS */
+    .progress-msg {
+      font-size: 13px; color: var(--muted); text-align: center;
+      margin-top: 10px; min-height: 18px;
+    }
+
     /* TOAST */
     .toast {
       position: fixed; bottom: 20px; right: 20px; left: 20px; max-width: 340px; margin: 0 auto;
@@ -363,13 +369,14 @@
       <button class="btn-cancel" onclick="closeModal()">取消</button>
       <button class="btn-submit" id="modal-submit-btn" onclick="submitItem()">新增品項</button>
     </div>
+    <div class="progress-msg" id="progress-msg"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycby5tbc9jvV-DDkkkWRIkQOumltw6ahwZBqXAQo98unNIR16xVV7BodQe8tAuWZ900yj/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbx5Ij4otADHSgo-7H20XMX8ikiiZAEQmM-lsy_UuZfH4VN6CaMXSzpKlUrqrMhMslYb2A/exec';
 const PASSWORD = 'admin1234';
 
 // LOGIN
@@ -404,7 +411,7 @@ function promptGasUrl() {
 }
 
 // STATE
-let allItems = [];
+let allItems  = [];
 let imageBase64 = null;
 let editingId = null;
 
@@ -432,11 +439,7 @@ function setLoading(on) {
 }
 
 // RENDER
-function renderAll(items) {
-  renderTable(items);
-  renderCards(items);
-  updateStats(items);
-}
+function renderAll(items) { renderTable(items); renderCards(items); updateStats(items); }
 
 function renderTable(items) {
   const tbody = document.getElementById('item-tbody');
@@ -504,6 +507,7 @@ function openModal() {
   document.getElementById('modal-title').textContent = '新增品項';
   document.getElementById('modal-submit-btn').textContent = '新增品項';
   document.getElementById('edit-id').value = '';
+  document.getElementById('progress-msg').textContent = '';
   resetForm();
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
@@ -520,6 +524,7 @@ function openEdit(id) {
   document.getElementById('f-qty').value   = item.qty;
   document.getElementById('f-price').value = item.price;
   document.getElementById('f-note').value  = item.note || '';
+  document.getElementById('progress-msg').textContent = '';
   if (item.imageUrl) {
     document.getElementById('preview-img').src = item.imageUrl;
     document.getElementById('img-preview').style.display = 'block';
@@ -527,7 +532,7 @@ function openEdit(id) {
   } else {
     removeImage();
   }
-  imageBase64 = null;
+  imageBase64 = null; // 只有換新圖才重新上傳
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
@@ -568,37 +573,86 @@ function removeImage() {
   document.getElementById('upload-area').style.display = 'block';
 }
 
-// SUBMIT
+function setProgress(msg) {
+  document.getElementById('progress-msg').textContent = msg;
+}
+
+// ═══════════════════════════════════════════
+//  SUBMIT
+//  流程：
+//  1. GET 送文字資料 (no-cors，不等回應)
+//  2. 等 1.5 秒讓 GAS 寫入完成
+//  3. 如果有圖片 → GET 讀取清單找到剛寫入的 ID
+//  4. POST body 送純 base64 圖片 (no-cors)
+//  5. 等 2 秒讓 GAS 處理圖片後重新載入
+// ═══════════════════════════════════════════
 async function submitItem() {
   if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
   const name  = document.getElementById('f-name').value.trim();
   const qty   = document.getElementById('f-qty').value.trim();
   const price = document.getElementById('f-price').value.trim();
   const note  = document.getElementById('f-note').value.trim();
-  if (!name)    { showToast('請輸入品項名稱', 'error'); return; }
-  if (qty === '') { showToast('請輸入數量', 'error'); return; }
+  if (!name)     { showToast('請輸入品項名稱', 'error'); return; }
+  if (qty === '') { showToast('請輸入數量',   'error'); return; }
 
-  const btn = document.getElementById('modal-submit-btn');
+  const btn    = document.getElementById('modal-submit-btn');
   const isEdit = !!editingId;
-  btn.textContent = isEdit ? '儲存中…' : '新增中…';
   btn.disabled = true;
 
-  let imgData = '';
-  if (imageBase64) imgData = imageBase64.split(',')[1] || '';
-
-  const params = new URLSearchParams({
-    action: isEdit ? 'edit' : 'add',
-    name, qty: Number(qty), price: Number(price)||0, note, image: imgData
-  });
-  if (isEdit) params.set('id', editingId);
-
   try {
+    // ── 步驟一：送文字資料 ──
+    setProgress('📝 儲存文字資料中…');
+    btn.textContent = isEdit ? '儲存中… 1/2' : '新增中… 1/2';
+
+    const params = new URLSearchParams({
+      action: isEdit ? 'edit' : 'add',
+      name, qty: Number(qty), price: Number(price)||0, note
+    });
+    if (isEdit) params.set('id', editingId);
+
+    // no-cors：送出但不等回應（Apps Script 會執行，CORS 只是擋回應）
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 1800)); // 等 GAS 寫完
+
+    // ── 步驟二：如果有新圖片，單獨用 POST 送 ──
+    if (imageBase64) {
+      setProgress('🖼️ 上傳圖片中…');
+      btn.textContent = isEdit ? '儲存中… 2/2' : '新增中… 2/2';
+
+      // 找目標 ID
+      let targetId = editingId; // 編輯時直接用既有 ID
+      if (!isEdit) {
+        // 新增時：重新讀清單，找名稱相符的最新一筆
+        try {
+          const res  = await fetch(`${GAS_URL}?action=getAll`);
+          const data = await res.json();
+          const matched = (data.items || []).filter(i => i.name === name);
+          targetId = matched.length ? matched[matched.length - 1].id : null;
+        } catch(e) {
+          // getAll 失敗也繼續，圖片就跳過
+          targetId = null;
+        }
+      }
+
+      if (targetId) {
+        const imgData = imageBase64.split(',')[1] || ''; // 去掉 data:image/...;base64, 前綴
+        // POST body 送純 base64，不走 URL，沒有長度限制
+        fetch(`${GAS_URL}?action=updateImage&id=${encodeURIComponent(targetId)}`, {
+          method: 'POST',
+          mode:   'no-cors',
+          body:   imgData
+        });
+        await new Promise(r => setTimeout(r, 2200)); // 等 GAS 處理圖片
+      }
+    }
+
+    setProgress('');
     showToast(isEdit ? '已儲存變更！' : '新增成功！', 'success');
     closeModal();
     loadItems();
+
   } catch(e) {
+    setProgress('');
     showToast('操作失敗：' + e.message, 'error');
   } finally {
     btn.textContent = isEdit ? '儲存變更' : '新增品項';

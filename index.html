@@ -10,6 +10,7 @@
       --bg: #0f1117; --surface: #1a1d27; --card: #22263a; --border: #2e3352;
       --accent: #4f8ef7; --accent2: #7c5cfc; --text: #e8eaf6; --muted: #7b82a8;
       --danger: #f7566a; --success: #3dd68c; --warn: #f5a623;
+      --price1: #4f8ef7; --price2: #a78bfa; --price3: #3dd68c; --price4: #f5a623;
       --font: 'Segoe UI', system-ui, sans-serif; --radius: 12px;
     }
     body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -78,7 +79,7 @@
     }
     .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-    main { padding: 20px; max-width: 1000px; margin: 0 auto; }
+    main { padding: 20px; max-width: 1100px; margin: 0 auto; }
 
     /* TOOLBAR */
     .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
@@ -113,6 +114,29 @@
     .stat-card .value.purple { color: var(--accent2); }
     .stat-card .value.green  { color: var(--success); }
 
+    /* ── PRICE GRID (table cell & card) ── */
+    .price-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 3px 8px; min-width: 130px;
+    }
+    .price-item { display: flex; flex-direction: column; }
+    .price-item .pl { font-size: 10px; color: var(--muted); line-height: 1; margin-bottom: 1px; }
+    .price-item .pv { font-size: 13px; font-weight: 600; }
+    .pv.c1 { color: var(--price1); }
+    .pv.c2 { color: var(--price2); }
+    .pv.c3 { color: var(--price3); }
+    .pv.c4 { color: var(--price4); }
+
+    /* price badges in card meta row */
+    .price-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .pbadge {
+      display: flex; align-items: center; gap: 3px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 7px; font-size: 12px;
+    }
+    .pbadge .pbl { font-size: 10px; color: var(--muted); }
+    .pbadge .pbv { font-weight: 600; }
+
     /* TABLE - desktop */
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
@@ -125,16 +149,52 @@
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: rgba(255,255,255,.03); }
     tbody td { padding: 12px 14px; font-size: 14px; vertical-align: middle; }
-    .item-img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+
+    /* ── CLICKABLE THUMBNAIL ── */
+    .thumb-wrap { cursor: zoom-in; position: relative; display: inline-block; }
+    .thumb-wrap:hover .zoom-hint { opacity: 1; }
+    .zoom-hint {
+      position: absolute; inset: 0; border-radius: 8px;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; opacity: 0; transition: opacity .18s; pointer-events: none;
+    }
+    .item-img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; display: block; }
     .img-placeholder {
       width: 42px; height: 42px; border-radius: 8px; background: var(--card);
       display: flex; align-items: center; justify-content: center; font-size: 18px;
     }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.88);
+      align-items: center; justify-content: center;
+      padding: 20px;
+      cursor: zoom-out;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img {
+      max-width: min(90vw, 860px); max-height: 86vh;
+      border-radius: 12px; object-fit: contain;
+      box-shadow: 0 32px 80px rgba(0,0,0,.7);
+      animation: lbIn .2s ease;
+      cursor: default;
+    }
+    @keyframes lbIn { from { opacity:0; transform:scale(.92); } to { opacity:1; transform:scale(1); } }
+    #lightbox-close {
+      position: fixed; top: 16px; right: 20px;
+      background: rgba(255,255,255,.12); border: none; border-radius: 50%;
+      width: 38px; height: 38px; color: #fff; font-size: 20px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .18s; z-index: 501;
+    }
+    #lightbox-close:hover { background: rgba(255,255,255,.25); }
+
     .qty-badge {
       background: rgba(79,142,247,.15); color: var(--accent);
       border-radius: 6px; padding: 2px 9px; font-size: 13px; font-weight: 600;
     }
-    .price-tag { font-weight: 600; color: var(--success); }
     .note-text { color: var(--muted); font-size: 13px; }
 
     /* ACTION BUTTONS */
@@ -159,7 +219,12 @@
       border-radius: var(--radius); padding: 14px;
     }
     .item-card-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
-    .item-card-top .item-img, .item-card-top .img-placeholder { flex-shrink: 0; }
+    .item-card-top .thumb-wrap,
+    .item-card-top .img-placeholder { flex-shrink: 0; }
+    /* bigger thumb on cards */
+    .item-card-top .item-img { width: 54px; height: 54px; }
+    .item-card-top .img-placeholder { width: 54px; height: 54px; font-size: 22px; }
+    .item-card-top .zoom-hint { font-size: 18px; }
     .item-card-info { flex: 1; min-width: 0; }
     .item-card-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .item-card-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -190,7 +255,7 @@
     .modal-overlay.open { display: flex; }
     .modal {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 18px; padding: 28px 24px; width: 100%; max-width: 460px;
+      border-radius: 18px; padding: 28px 24px; width: 100%; max-width: 480px;
       box-shadow: 0 32px 80px rgba(0,0,0,.6); max-height: 90vh; overflow-y: auto;
       animation: slideUp .22s ease;
     }
@@ -209,6 +274,22 @@
       font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .2s;
     }
     .btn-submit:hover { opacity: .88; }
+
+    /* ── PRICE FIELDS in modal: 2-col grid ── */
+    .price-fields {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+    }
+    .price-fields .field { margin-bottom: 0; }
+    .price-fields .field label { font-size: 12px; }
+    /* colour dots in label */
+    .price-fields .field label::before {
+      content: ''; display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; margin-right: 5px; vertical-align: middle;
+    }
+    .price-fields .field:nth-child(1) label::before { background: var(--price1); }
+    .price-fields .field:nth-child(2) label::before { background: var(--price2); }
+    .price-fields .field:nth-child(3) label::before { background: var(--price3); }
+    .price-fields .field:nth-child(4) label::before { background: var(--price4); }
 
     /* IMAGE UPLOAD */
     .img-upload-area {
@@ -230,9 +311,7 @@
       color: #fff; cursor: pointer; font-size: 13px;
       display: flex; align-items: center; justify-content: center;
     }
-    .img-size-hint {
-      font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right;
-    }
+    .img-size-hint { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right; }
 
     /* PROGRESS */
     .progress-msg {
@@ -271,6 +350,7 @@
       .table-wrap { display: none; }
       .card-list  { display: flex; }
       header { padding: 0 14px; }
+      /* price fields 2-col stays on mobile too */
     }
     @media (min-width: 601px) {
       .toast { left: auto; max-width: 340px; }
@@ -322,7 +402,7 @@
     <div class="stats">
       <div class="stat-card"><div class="label">品項總數</div><div class="value blue" id="stat-count">—</div></div>
       <div class="stat-card"><div class="label">總數量</div><div class="value purple" id="stat-qty">—</div></div>
-      <div class="stat-card"><div class="label">總價值</div><div class="value green" id="stat-value">—</div></div>
+      <div class="stat-card"><div class="label">庫存售價值</div><div class="value green" id="stat-value">—</div></div>
     </div>
 
     <!-- Desktop table -->
@@ -342,6 +422,12 @@
     <!-- Mobile cards -->
     <div class="card-list" id="card-list"></div>
   </main>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox(event)">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="放大圖片" onclick="event.stopPropagation()" />
 </div>
 
 <!-- MODAL -->
@@ -364,9 +450,19 @@
       </div>
       <div class="img-size-hint" id="img-size-hint"></div>
     </div>
+
     <div class="field"><label>名稱 *</label><input type="text" id="f-name" placeholder="品項名稱" /></div>
     <div class="field"><label>數量 *</label><input type="number" id="f-qty" placeholder="0" min="0" /></div>
-    <div class="field"><label>價格</label><input type="number" id="f-price" placeholder="0" min="0" step="0.01" /></div>
+
+    <!-- 四欄價格 2×2 -->
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:500;">價格設定</div>
+    <div class="price-fields">
+      <div class="field"><label>進價</label><input type="number" id="f-cost"     placeholder="0" min="0" step="0.01" /></div>
+      <div class="field"><label>批價</label><input type="number" id="f-wholesale" placeholder="0" min="0" step="0.01" /></div>
+      <div class="field"><label>售價</label><input type="number" id="f-retail"   placeholder="0" min="0" step="0.01" /></div>
+      <div class="field"><label>優惠價</label><input type="number" id="f-promo"  placeholder="0" min="0" step="0.01" /></div>
+    </div>
+
     <div class="field"><label>備註</label><textarea id="f-note" placeholder="備註說明…"></textarea></div>
 
     <div class="modal-actions">
@@ -380,7 +476,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyc12TgPWjPpW7X7rbvzso6VZUzyrMC1R7VxZbwiZWu3jP_bncrYPi1mvQYMdSrMH0y6Q/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbzkzFnUxJ9PhBgaGw2gbTFISKpY0YuDa-Vd85vh6DYiQcFYs1_TkWbZb-QYfaIEdeX65Q/exec';
 const PASSWORD = 'admin1234';
 
 // LOGIN
@@ -415,20 +511,67 @@ function promptGasUrl() {
 }
 
 // STATE
-let allItems  = [];
-let imageBase64 = null; // 已壓縮的完整 data URL（含 data:image/...;base64, 前綴）
-let editingId = null;
+let allItems    = [];
+let imageBase64 = null;
+let editingId   = null;
 
-// ═══════════════════════════════════════════
-//  IMAGE COMPRESSION
-//  目標：壓縮至 ≤ 50KB（base64 ≈ 66.7KB 文字）
-//  步驟：
-//  1. 先依 maxDim 縮小尺寸（預設 400px）
-//  2. 以 quality 0.85 開始轉 JPEG，不斷降低直到 ≤ 50KB
-//  3. 若還是太大，縮小一次 maxDim 再試
-// ═══════════════════════════════════════════
-const MAX_BYTES    = 50 * 1024;         // 50 KB（原始二進位）
-const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3); // base64 字元上限 ≈ 68267
+// ── LIGHTBOX ──
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(e) {
+  // 如果是 img 本身觸發就忽略（已在 HTML 裡 stopPropagation）
+  if (e && e.target === document.getElementById('lightbox-img')) return;
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// ── THUMBNAIL helper ──
+function thumbHTML(imageData, size) {
+  // size: '' = table (42px), 'lg' = card (54px)
+  if (!imageData) return `<div class="img-placeholder">📦</div>`;
+  const src = `data:image/jpeg;base64,${esc(imageData)}`;
+  return `<div class="thumb-wrap" onclick="openLightbox('${src}')">
+    <img class="item-img" src="${src}" />
+    <div class="zoom-hint">🔍</div>
+  </div>`;
+}
+
+// ── PRICE GRID helper (table) ──
+function priceGridHTML(item) {
+  const fmt = v => v ? '$'+Number(v).toLocaleString() : '<span style="color:var(--muted);font-size:11px;">—</span>';
+  return `<div class="price-grid">
+    <div class="price-item"><span class="pl">進價</span><span class="pv c1">${fmt(item.cost)}</span></div>
+    <div class="price-item"><span class="pl">批價</span><span class="pv c2">${fmt(item.wholesale)}</span></div>
+    <div class="price-item"><span class="pl">售價</span><span class="pv c3">${fmt(item.retail)}</span></div>
+    <div class="price-item"><span class="pl">優惠</span><span class="pv c4">${fmt(item.promo)}</span></div>
+  </div>`;
+}
+
+// ── PRICE BADGES helper (card) ──
+function priceBadgesHTML(item) {
+  const defs = [
+    { label:'進', key:'cost',      cls:'c1' },
+    { label:'批', key:'wholesale', cls:'c2' },
+    { label:'售', key:'retail',    cls:'c3' },
+    { label:'惠', key:'promo',     cls:'c4' },
+  ];
+  return defs.filter(d => item[d.key]).map(d =>
+    `<span class="pbadge">
+       <span class="pbl">${d.label}</span>
+       <span class="pbv ${d.cls}">$${Number(item[d.key]).toLocaleString()}</span>
+     </span>`
+  ).join('') || '<span style="color:var(--muted);font-size:12px;">未設定</span>';
+}
+
+// ── IMAGE COMPRESSION ──
+const MAX_BYTES    = 50 * 1024;
+const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3);
 
 async function compressImage(file) {
   return new Promise((resolve, reject) => {
@@ -438,19 +581,13 @@ async function compressImage(file) {
       const img = new Image();
       img.onerror = () => reject(new Error('圖片解碼失敗'));
       img.onload = () => {
-        // 嘗試不同尺寸直到符合限制
         for (let maxDim of [400, 300, 200, 150]) {
           const scale  = Math.min(1, maxDim / Math.max(img.width, img.height));
           const width  = Math.round(img.width  * scale);
           const height = Math.round(img.height * scale);
-
           const canvas = document.createElement('canvas');
-          canvas.width  = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // 從 quality 0.85 逐步降低
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
           for (let q = 0.85; q >= 0.1; q -= 0.1) {
             const dataUrl = canvas.toDataURL('image/jpeg', q);
             const base64  = dataUrl.split(',')[1];
@@ -502,12 +639,10 @@ function renderTable(items) {
   }
   tbody.innerHTML = items.map(item => `
     <tr>
-      <td>${item.imageData
-        ? `<img class="item-img" src="data:image/jpeg;base64,${esc(item.imageData)}" />`
-        : `<div class="img-placeholder">📦</div>`}</td>
+      <td>${thumbHTML(item.imageData)}</td>
       <td><strong>${esc(item.name)}</strong></td>
       <td><span class="qty-badge">${esc(String(item.qty))}</span></td>
-      <td><span class="price-tag">$${Number(item.price||0).toLocaleString()}</span></td>
+      <td>${priceGridHTML(item)}</td>
       <td><span class="note-text">${esc(item.note||'—')}</span></td>
       <td>
         <div class="actions">
@@ -527,15 +662,13 @@ function renderCards(items) {
   list.innerHTML = items.map(item => `
     <div class="item-card">
       <div class="item-card-top">
-        ${item.imageData
-          ? `<img class="item-img" src="data:image/jpeg;base64,${esc(item.imageData)}" />`
-          : `<div class="img-placeholder">📦</div>`}
+        ${thumbHTML(item.imageData, 'lg')}
         <div class="item-card-info">
           <div class="item-card-name">${esc(item.name)}</div>
           <div class="item-card-meta">
             <span class="qty-badge">${esc(String(item.qty))}</span>
-            <span class="price-tag">$${Number(item.price||0).toLocaleString()}</span>
           </div>
+          <div class="price-badges">${priceBadgesHTML(item)}</div>
           ${item.note ? `<div class="item-card-note">${esc(item.note)}</div>` : ''}
         </div>
       </div>
@@ -549,7 +682,8 @@ function renderCards(items) {
 function updateStats(items) {
   document.getElementById('stat-count').textContent = items.length;
   document.getElementById('stat-qty').textContent   = items.reduce((s,i)=>s+Number(i.qty||0),0).toLocaleString();
-  document.getElementById('stat-value').textContent = '$'+items.reduce((s,i)=>s+Number(i.qty||0)*Number(i.price||0),0).toLocaleString();
+  // 統計值用售價
+  document.getElementById('stat-value').textContent = '$'+items.reduce((s,i)=>s+Number(i.qty||0)*Number(i.retail||0),0).toLocaleString();
 }
 
 // SEARCH
@@ -576,23 +710,25 @@ function openEdit(id) {
   editingId = id;
   document.getElementById('modal-title').textContent = '編輯品項';
   document.getElementById('modal-submit-btn').textContent = '儲存變更';
-  document.getElementById('edit-id').value = id;
-  document.getElementById('f-name').value  = item.name;
-  document.getElementById('f-qty').value   = item.qty;
-  document.getElementById('f-price').value = item.price;
-  document.getElementById('f-note').value  = item.note || '';
+  document.getElementById('edit-id').value    = id;
+  document.getElementById('f-name').value     = item.name;
+  document.getElementById('f-qty').value      = item.qty;
+  document.getElementById('f-cost').value      = item.cost      || '';
+  document.getElementById('f-wholesale').value = item.wholesale || '';
+  document.getElementById('f-retail').value    = item.retail    || '';
+  document.getElementById('f-promo').value     = item.promo     || '';
+  document.getElementById('f-note').value      = item.note      || '';
   document.getElementById('progress-msg').textContent = '';
   document.getElementById('img-size-hint').textContent = '';
 
   if (item.imageData) {
-    // 用儲存的 base64 顯示預覽
     document.getElementById('preview-img').src = 'data:image/jpeg;base64,' + item.imageData;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
   } else {
     removeImage();
   }
-  imageBase64 = null; // 只有換新圖才更新
+  imageBase64 = null;
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
@@ -604,7 +740,8 @@ function closeModal() {
 }
 
 function resetForm() {
-  ['f-name','f-qty','f-price','f-note'].forEach(id => document.getElementById(id).value = '');
+  ['f-name','f-qty','f-cost','f-wholesale','f-retail','f-promo','f-note']
+    .forEach(id => document.getElementById(id).value = '');
   document.getElementById('img-size-hint').textContent = '';
   removeImage();
 }
@@ -617,13 +754,11 @@ document.getElementById('modal').addEventListener('click', e => {
 async function handleImageSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-
   setProgress('🗜️ 壓縮圖片中…');
   document.getElementById('img-size-hint').textContent = '';
-
   try {
     const result = await compressImage(file);
-    imageBase64 = result.base64; // 純 base64，無前綴
+    imageBase64 = result.base64;
     document.getElementById('preview-img').src = result.dataUrl;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
@@ -647,18 +782,16 @@ function setProgress(msg) {
   document.getElementById('progress-msg').textContent = msg;
 }
 
-// ═══════════════════════════════════════════
-//  SUBMIT
-//  圖片直接包在 URL 參數裡傳給 GAS（no-cors GET）
-//  GAS 把 base64 存進 Sheet 的「圖片」欄
-//  回傳時從 Sheet 讀出 base64，前端直接 data: 顯示
-// ═══════════════════════════════════════════
+// SUBMIT
 async function submitItem() {
   if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
-  const name  = document.getElementById('f-name').value.trim();
-  const qty   = document.getElementById('f-qty').value.trim();
-  const price = document.getElementById('f-price').value.trim();
-  const note  = document.getElementById('f-note').value.trim();
+  const name      = document.getElementById('f-name').value.trim();
+  const qty       = document.getElementById('f-qty').value.trim();
+  const cost      = document.getElementById('f-cost').value.trim();
+  const wholesale = document.getElementById('f-wholesale').value.trim();
+  const retail    = document.getElementById('f-retail').value.trim();
+  const promo     = document.getElementById('f-promo').value.trim();
+  const note      = document.getElementById('f-note').value.trim();
   if (!name)     { showToast('請輸入品項名稱', 'error'); return; }
   if (qty === '') { showToast('請輸入數量',   'error'); return; }
 
@@ -669,9 +802,6 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    // 決定傳哪張圖：
-    // - 新增：若有選新圖用 imageBase64，否則空字串
-    // - 編輯：若有選新圖用 imageBase64（更新），否則傳特殊值 '__keep__' 讓 GAS 保留舊圖
     let imageParam = '';
     if (isEdit) {
       imageParam = imageBase64 ? imageBase64 : '__keep__';
@@ -681,28 +811,24 @@ async function submitItem() {
 
     const params = new URLSearchParams({
       action: isEdit ? 'edit' : 'add',
-      name,
-      qty:   Number(qty),
-      price: Number(price) || 0,
-      note,
-      image: imageParam
+      name, qty: Number(qty),
+      cost:      Number(cost)      || 0,
+      wholesale: Number(wholesale) || 0,
+      retail:    Number(retail)    || 0,
+      promo:     Number(promo)     || 0,
+      note, image: imageParam
     });
     if (isEdit) params.set('id', editingId);
 
-    // 圖片可能超過 URL 長度限制，改用 POST body 傳送
     const res = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
     });
 
-    // GAS doPost 會回傳 JSON
     let data;
     try { data = await res.json(); } catch(_) { data = { success: true }; }
-
-    if (data && data.success === false) {
-      throw new Error(data.error || '伺服器回傳錯誤');
-    }
+    if (data && data.success === false) throw new Error(data.error || '伺服器回傳錯誤');
 
     setProgress('');
     showToast(isEdit ? '已儲存變更！' : '新增成功！', 'success');
@@ -722,7 +848,6 @@ async function submitItem() {
 async function deleteItem(id, name) {
   if (!confirm(`確定要刪除「${name}」嗎？`)) return;
   try {
-    // DELETE 用 POST 傳送
     const params = new URLSearchParams({ action: 'delete', id });
     fetch(GAS_URL, {
       method: 'POST',

@@ -618,7 +618,7 @@ async function submitItem() {
     if (imageBase64) {
       setProgress('🖼️ 上傳圖片中…');
       btn.textContent = isEdit ? '儲存中… 2/2' : '新增中… 2/2';
-
+      console.log(imageBase64 ? '有圖片，長度：' + imageBase64.length : '沒有圖片');
       // 找目標 ID
       let targetId = editingId; // 編輯時直接用既有 ID
       if (!isEdit) {

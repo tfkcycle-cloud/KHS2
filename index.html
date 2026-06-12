@@ -230,6 +230,9 @@
       color: #fff; cursor: pointer; font-size: 13px;
       display: flex; align-items: center; justify-content: center;
     }
+    .img-size-hint {
+      font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right;
+    }
 
     /* PROGRESS */
     .progress-msg {
@@ -357,8 +360,9 @@
         <input type="file" id="file-input" accept="image/*" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>點擊上傳圖片</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（最大 2MB）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（自動壓縮至 50KB 以內）</p>
       </div>
+      <div class="img-size-hint" id="img-size-hint"></div>
     </div>
     <div class="field"><label>名稱 *</label><input type="text" id="f-name" placeholder="品項名稱" /></div>
     <div class="field"><label>數量 *</label><input type="number" id="f-qty" placeholder="0" min="0" /></div>
@@ -376,7 +380,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbx5Ij4otADHSgo-7H20XMX8ikiiZAEQmM-lsy_UuZfH4VN6CaMXSzpKlUrqrMhMslYb2A/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyc12TgPWjPpW7X7rbvzso6VZUzyrMC1R7VxZbwiZWu3jP_bncrYPi1mvQYMdSrMH0y6Q/exec';
 const PASSWORD = 'admin1234';
 
 // LOGIN
@@ -412,8 +416,57 @@ function promptGasUrl() {
 
 // STATE
 let allItems  = [];
-let imageBase64 = null;
+let imageBase64 = null; // 已壓縮的完整 data URL（含 data:image/...;base64, 前綴）
 let editingId = null;
+
+// ═══════════════════════════════════════════
+//  IMAGE COMPRESSION
+//  目標：壓縮至 ≤ 50KB（base64 ≈ 66.7KB 文字）
+//  步驟：
+//  1. 先依 maxDim 縮小尺寸（預設 400px）
+//  2. 以 quality 0.85 開始轉 JPEG，不斷降低直到 ≤ 50KB
+//  3. 若還是太大，縮小一次 maxDim 再試
+// ═══════════════════════════════════════════
+const MAX_BYTES    = 50 * 1024;         // 50 KB（原始二進位）
+const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3); // base64 字元上限 ≈ 68267
+
+async function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('讀取失敗'));
+    reader.onload = ev => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('圖片解碼失敗'));
+      img.onload = () => {
+        // 嘗試不同尺寸直到符合限制
+        for (let maxDim of [400, 300, 200, 150]) {
+          const scale  = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const width  = Math.round(img.width  * scale);
+          const height = Math.round(img.height * scale);
+
+          const canvas = document.createElement('canvas');
+          canvas.width  = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 從 quality 0.85 逐步降低
+          for (let q = 0.85; q >= 0.1; q -= 0.1) {
+            const dataUrl = canvas.toDataURL('image/jpeg', q);
+            const base64  = dataUrl.split(',')[1];
+            if (base64.length <= BASE64_LIMIT) {
+              resolve({ dataUrl, base64, sizeKB: Math.round(base64.length * 3 / 4 / 1024) });
+              return;
+            }
+          }
+        }
+        reject(new Error('圖片太複雜，無法壓縮至 50KB'));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // LOAD
 async function loadItems() {
@@ -449,7 +502,9 @@ function renderTable(items) {
   }
   tbody.innerHTML = items.map(item => `
     <tr>
-      <td>${item.imageUrl ? `<img class="item-img" src="${esc(item.imageUrl)}" />` : `<div class="img-placeholder">📦</div>`}</td>
+      <td>${item.imageData
+        ? `<img class="item-img" src="data:image/jpeg;base64,${esc(item.imageData)}" />`
+        : `<div class="img-placeholder">📦</div>`}</td>
       <td><strong>${esc(item.name)}</strong></td>
       <td><span class="qty-badge">${esc(String(item.qty))}</span></td>
       <td><span class="price-tag">$${Number(item.price||0).toLocaleString()}</span></td>
@@ -472,7 +527,9 @@ function renderCards(items) {
   list.innerHTML = items.map(item => `
     <div class="item-card">
       <div class="item-card-top">
-        ${item.imageUrl ? `<img class="item-img" src="${esc(item.imageUrl)}" />` : `<div class="img-placeholder">📦</div>`}
+        ${item.imageData
+          ? `<img class="item-img" src="data:image/jpeg;base64,${esc(item.imageData)}" />`
+          : `<div class="img-placeholder">📦</div>`}
         <div class="item-card-info">
           <div class="item-card-name">${esc(item.name)}</div>
           <div class="item-card-meta">
@@ -525,14 +582,17 @@ function openEdit(id) {
   document.getElementById('f-price').value = item.price;
   document.getElementById('f-note').value  = item.note || '';
   document.getElementById('progress-msg').textContent = '';
-  if (item.imageUrl) {
-    document.getElementById('preview-img').src = item.imageUrl;
+  document.getElementById('img-size-hint').textContent = '';
+
+  if (item.imageData) {
+    // 用儲存的 base64 顯示預覽
+    document.getElementById('preview-img').src = 'data:image/jpeg;base64,' + item.imageData;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
   } else {
     removeImage();
   }
-  imageBase64 = null; // 只有換新圖才重新上傳
+  imageBase64 = null; // 只有換新圖才更新
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
@@ -545,6 +605,7 @@ function closeModal() {
 
 function resetForm() {
   ['f-name','f-qty','f-price','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('img-size-hint').textContent = '';
   removeImage();
 }
 
@@ -552,25 +613,34 @@ document.getElementById('modal').addEventListener('click', e => {
   if (e.target === document.getElementById('modal')) closeModal();
 });
 
-// IMAGE
-function handleImageSelect(e) {
+// IMAGE SELECT & COMPRESS
+async function handleImageSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 2*1024*1024) { showToast('圖片不能超過 2MB', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    imageBase64 = ev.target.result;
-    document.getElementById('preview-img').src = imageBase64;
+
+  setProgress('🗜️ 壓縮圖片中…');
+  document.getElementById('img-size-hint').textContent = '';
+
+  try {
+    const result = await compressImage(file);
+    imageBase64 = result.base64; // 純 base64，無前綴
+    document.getElementById('preview-img').src = result.dataUrl;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
+    document.getElementById('img-size-hint').textContent = `壓縮後約 ${result.sizeKB} KB`;
+    setProgress('');
+  } catch(err) {
+    showToast(err.message, 'error');
+    setProgress('');
+  }
 }
+
 function removeImage() {
   imageBase64 = null;
   document.getElementById('file-input').value = '';
   document.getElementById('img-preview').style.display = 'none';
   document.getElementById('upload-area').style.display = 'block';
+  document.getElementById('img-size-hint').textContent = '';
 }
 
 function setProgress(msg) {
@@ -579,12 +649,9 @@ function setProgress(msg) {
 
 // ═══════════════════════════════════════════
 //  SUBMIT
-//  流程：
-//  1. GET 送文字資料 (no-cors，不等回應)
-//  2. 等 1.5 秒讓 GAS 寫入完成
-//  3. 如果有圖片 → GET 讀取清單找到剛寫入的 ID
-//  4. POST body 送純 base64 圖片 (no-cors)
-//  5. 等 2 秒讓 GAS 處理圖片後重新載入
+//  圖片直接包在 URL 參數裡傳給 GAS（no-cors GET）
+//  GAS 把 base64 存進 Sheet 的「圖片」欄
+//  回傳時從 Sheet 讀出 base64，前端直接 data: 顯示
 // ═══════════════════════════════════════════
 async function submitItem() {
   if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
@@ -598,52 +665,43 @@ async function submitItem() {
   const btn    = document.getElementById('modal-submit-btn');
   const isEdit = !!editingId;
   btn.disabled = true;
+  setProgress('💾 儲存中…');
+  btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    // ── 步驟一：送文字資料 ──
-    setProgress('📝 儲存文字資料中…');
-    btn.textContent = isEdit ? '儲存中… 1/2' : '新增中… 1/2';
+    // 決定傳哪張圖：
+    // - 新增：若有選新圖用 imageBase64，否則空字串
+    // - 編輯：若有選新圖用 imageBase64（更新），否則傳特殊值 '__keep__' 讓 GAS 保留舊圖
+    let imageParam = '';
+    if (isEdit) {
+      imageParam = imageBase64 ? imageBase64 : '__keep__';
+    } else {
+      imageParam = imageBase64 || '';
+    }
 
     const params = new URLSearchParams({
       action: isEdit ? 'edit' : 'add',
-      name, qty: Number(qty), price: Number(price)||0, note
+      name,
+      qty:   Number(qty),
+      price: Number(price) || 0,
+      note,
+      image: imageParam
     });
     if (isEdit) params.set('id', editingId);
 
-    // no-cors：送出但不等回應（Apps Script 會執行，CORS 只是擋回應）
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    await new Promise(r => setTimeout(r, 1800)); // 等 GAS 寫完
+    // 圖片可能超過 URL 長度限制，改用 POST body 傳送
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
 
-    // ── 步驟二：如果有新圖片，單獨用 POST 送 ──
-    if (imageBase64) {
-      setProgress('🖼️ 上傳圖片中…');
-      btn.textContent = isEdit ? '儲存中… 2/2' : '新增中… 2/2';
-      console.log(imageBase64 ? '有圖片，長度：' + imageBase64.length : '沒有圖片');
-      // 找目標 ID
-      let targetId = editingId; // 編輯時直接用既有 ID
-      if (!isEdit) {
-        // 新增時：重新讀清單，找名稱相符的最新一筆
-        try {
-          const res  = await fetch(`${GAS_URL}?action=getAll`);
-          const data = await res.json();
-          const matched = (data.items || []).filter(i => i.name === name);
-          targetId = matched.length ? matched[matched.length - 1].id : null;
-        } catch(e) {
-          // getAll 失敗也繼續，圖片就跳過
-          targetId = null;
-        }
-      }
+    // GAS doPost 會回傳 JSON
+    let data;
+    try { data = await res.json(); } catch(_) { data = { success: true }; }
 
-      if (targetId) {
-        const imgData = imageBase64.split(',')[1] || ''; // 去掉 data:image/...;base64, 前綴
-        // POST body 送純 base64，不走 URL，沒有長度限制
-        fetch(`${GAS_URL}?action=updateImage&id=${encodeURIComponent(targetId)}`, {
-          method: 'POST',
-          mode:   'no-cors',
-          body:   imgData
-        });
-        await new Promise(r => setTimeout(r, 2200)); // 等 GAS 處理圖片
-      }
+    if (data && data.success === false) {
+      throw new Error(data.error || '伺服器回傳錯誤');
     }
 
     setProgress('');
@@ -664,8 +722,14 @@ async function submitItem() {
 async function deleteItem(id, name) {
   if (!confirm(`確定要刪除「${name}」嗎？`)) return;
   try {
-    fetch(`${GAS_URL}?action=delete&id=${encodeURIComponent(id)}`, { mode: 'no-cors' });
-    await new Promise(r => setTimeout(r, 1200));
+    // DELETE 用 POST 傳送
+    const params = new URLSearchParams({ action: 'delete', id });
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    await new Promise(r => setTimeout(r, 1000));
     showToast('已刪除「' + name + '」', 'success');
     loadItems();
   } catch(e) {

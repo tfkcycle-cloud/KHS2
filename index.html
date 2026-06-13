@@ -15,7 +15,6 @@
     }
     body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    /* LOGIN */
     #login-screen {
       display: flex; align-items: center; justify-content: center;
       min-height: 100vh;
@@ -36,6 +35,7 @@
     }
     .login-logo h1 { font-size: 20px; font-weight: 700; }
     .login-logo p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
     .field input, .field textarea {
@@ -45,6 +45,7 @@
     }
     .field input:focus, .field textarea:focus { border-color: var(--accent); }
     .field textarea { resize: vertical; min-height: 72px; }
+
     .btn-primary {
       width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2));
       border: none; border-radius: 10px; padding: 13px; color: #fff;
@@ -53,13 +54,13 @@
     }
     .btn-primary:hover { opacity: .88; }
     .btn-primary:active { transform: scale(.98); }
+
     .error-msg {
       background: rgba(247,86,106,.12); border: 1px solid rgba(247,86,106,.35);
       color: var(--danger); border-radius: 8px; padding: 10px 13px;
       font-size: 13px; margin-bottom: 14px; display: none;
     }
 
-    /* APP */
     #app { display: none; }
     header {
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -73,6 +74,34 @@
       border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
     header h2 { font-size: 15px; font-weight: 700; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .role-badge {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--card);
+    }
+
+    .role-badge.admin {
+      color: var(--success);
+      border-color: rgba(61,214,140,.35);
+      background: rgba(61,214,140,.1);
+    }
+
+    .role-badge.basic {
+      color: var(--warn);
+      border-color: rgba(245,166,35,.35);
+      background: rgba(245,166,35,.1);
+    }
+
     .logout-btn {
       background: transparent; border: 1px solid var(--border); border-radius: 8px;
       color: var(--muted); padding: 6px 12px; font-size: 13px; cursor: pointer; transition: all .2s;
@@ -81,7 +110,6 @@
 
     main { padding: 20px; max-width: 1100px; margin: 0 auto; }
 
-    /* TOOLBAR */
     .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
     .search-wrap { flex: 1; min-width: 160px; position: relative; }
     .search-wrap input {
@@ -102,7 +130,6 @@
     }
     .btn-add:hover { opacity: .88; }
 
-    /* STATS */
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
     .stat-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -114,10 +141,13 @@
     .stat-card .value.purple { color: var(--accent2); }
     .stat-card .value.green  { color: var(--success); }
 
-    /* ── PRICE GRID (table cell & card) ── */
     .price-grid {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 3px 8px; min-width: 130px;
+    }
+    .price-grid.basic-price {
+      grid-template-columns: 1fr;
+      min-width: 70px;
     }
     .price-item { display: flex; flex-direction: column; }
     .price-item .pl { font-size: 10px; color: var(--muted); line-height: 1; margin-bottom: 1px; }
@@ -127,7 +157,6 @@
     .pv.c3 { color: var(--price3); }
     .pv.c4 { color: var(--price4); }
 
-    /* price badges in card meta row */
     .price-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
     .pbadge {
       display: flex; align-items: center; gap: 3px;
@@ -137,7 +166,6 @@
     .pbadge .pbl { font-size: 10px; color: var(--muted); }
     .pbadge .pbv { font-weight: 600; }
 
-    /* TABLE - desktop */
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
     thead th {
@@ -150,7 +178,6 @@
     tbody tr:hover { background: rgba(255,255,255,.03); }
     tbody td { padding: 12px 14px; font-size: 14px; vertical-align: middle; }
 
-    /* ── CLICKABLE THUMBNAIL ── */
     .thumb-wrap { cursor: zoom-in; position: relative; display: inline-block; }
     .thumb-wrap:hover .zoom-hint { opacity: 1; }
     .zoom-hint {
@@ -165,7 +192,6 @@
       display: flex; align-items: center; justify-content: center; font-size: 18px;
     }
 
-    /* ── LIGHTBOX ── */
     #lightbox {
       display: none; position: fixed; inset: 0; z-index: 500;
       background: rgba(0,0,0,.88);
@@ -197,7 +223,6 @@
     }
     .note-text { color: var(--muted); font-size: 13px; }
 
-    /* ACTION BUTTONS */
     .actions { display: flex; gap: 6px; }
     .btn-edit {
       background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3);
@@ -211,8 +236,12 @@
       font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap;
     }
     .btn-delete:hover { background: rgba(247,86,106,.22); }
+    .restricted-text {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
 
-    /* CARD VIEW - mobile */
     .card-list { display: none; flex-direction: column; gap: 10px; }
     .item-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -221,7 +250,6 @@
     .item-card-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
     .item-card-top .thumb-wrap,
     .item-card-top .img-placeholder { flex-shrink: 0; }
-    /* bigger thumb on cards */
     .item-card-top .item-img { width: 54px; height: 54px; }
     .item-card-top .img-placeholder { width: 54px; height: 54px; font-size: 22px; }
     .item-card-top .zoom-hint { font-size: 18px; }
@@ -233,7 +261,6 @@
     .item-card-actions .btn-edit,
     .item-card-actions .btn-delete { flex: 1; text-align: center; padding: 8px; }
 
-    /* EMPTY / LOADING */
     .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
     .empty-state .big { font-size: 36px; margin-bottom: 10px; }
     .empty-state p { font-size: 14px; }
@@ -246,7 +273,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* MODAL */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,.65); z-index: 200;
@@ -275,13 +301,11 @@
     }
     .btn-submit:hover { opacity: .88; }
 
-    /* ── PRICE FIELDS in modal: 2-col grid ── */
     .price-fields {
       display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
     }
     .price-fields .field { margin-bottom: 0; }
     .price-fields .field label { font-size: 12px; }
-    /* colour dots in label */
     .price-fields .field label::before {
       content: ''; display: inline-block; width: 7px; height: 7px;
       border-radius: 50%; margin-right: 5px; vertical-align: middle;
@@ -291,7 +315,10 @@
     .price-fields .field:nth-child(3) label::before { background: var(--price3); }
     .price-fields .field:nth-child(4) label::before { background: var(--price4); }
 
-    /* IMAGE UPLOAD */
+    .basic-hide {
+      display: none !important;
+    }
+
     .img-upload-area {
       border: 2px dashed var(--border); border-radius: 10px; padding: 20px;
       text-align: center; cursor: pointer; transition: border-color .2s; margin-bottom: 4px;
@@ -313,13 +340,11 @@
     }
     .img-size-hint { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right; }
 
-    /* PROGRESS */
     .progress-msg {
       font-size: 13px; color: var(--muted); text-align: center;
       margin-top: 10px; min-height: 18px;
     }
 
-    /* TOAST */
     .toast {
       position: fixed; bottom: 20px; right: 20px; left: 20px; max-width: 340px; margin: 0 auto;
       background: var(--card); border: 1px solid var(--border); border-radius: 10px;
@@ -331,7 +356,6 @@
     .toast.success { border-color: var(--success); color: var(--success); }
     .toast.error   { border-color: var(--danger);  color: var(--danger);  }
 
-    /* GAS BANNER */
     .gas-banner {
       background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.3);
       border-radius: 10px; padding: 11px 14px; font-size: 13px; color: var(--accent);
@@ -342,7 +366,6 @@
       color: #fff; padding: 5px 12px; font-size: 12px; cursor: pointer;
     }
 
-    /* RWD */
     @media (max-width: 600px) {
       main { padding: 14px; }
       .stats { grid-template-columns: 1fr 1fr; }
@@ -350,7 +373,7 @@
       .table-wrap { display: none; }
       .card-list  { display: flex; }
       header { padding: 0 14px; }
-      /* price fields 2-col stays on mobile too */
+      .role-badge { display: none; }
     }
     @media (min-width: 601px) {
       .toast { left: auto; max-width: 340px; }
@@ -359,13 +382,12 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
       <div class="icon">📦</div>
       <h1>庫存管理系統</h1>
-      <p>請輸入密碼以繼續</p>
+      <p>abc123：限制模式｜eddycyce：高級模式</p>
     </div>
     <div class="error-msg" id="login-error">密碼錯誤，請再試一次</div>
     <div class="field">
@@ -376,15 +398,18 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <header>
     <div class="header-left">
       <div class="header-logo">📦</div>
       <h2>庫存管理</h2>
     </div>
-    <button class="logout-btn" onclick="doLogout()">登出</button>
+    <div class="header-right">
+      <span class="role-badge" id="role-badge">未登入</span>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
+    </div>
   </header>
+
   <main>
     <div class="gas-banner" id="gas-banner">
       ⚙️ 尚未設定 Apps Script URL
@@ -405,7 +430,6 @@
       <div class="stat-card"><div class="label">庫存售價值</div><div class="value green" id="stat-value">—</div></div>
     </div>
 
-    <!-- Desktop table -->
     <div class="table-wrap">
       <table>
         <thead>
@@ -419,18 +443,15 @@
       </table>
     </div>
 
-    <!-- Mobile cards -->
     <div class="card-list" id="card-list"></div>
   </main>
 </div>
 
-<!-- LIGHTBOX -->
 <div id="lightbox" onclick="closeLightbox(event)">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="放大圖片" onclick="event.stopPropagation()" />
 </div>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h3 id="modal-title">新增品項</h3>
@@ -454,13 +475,12 @@
     <div class="field"><label>名稱 *</label><input type="text" id="f-name" placeholder="品項名稱" /></div>
     <div class="field"><label>數量 *</label><input type="number" id="f-qty" placeholder="0" min="0" /></div>
 
-    <!-- 四欄價格 2×2 -->
     <div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:500;">價格設定</div>
     <div class="price-fields">
-      <div class="field"><label>進價</label><input type="number" id="f-cost"     placeholder="0" min="0" step="0.01" /></div>
-      <div class="field"><label>批價</label><input type="number" id="f-wholesale" placeholder="0" min="0" step="0.01" /></div>
-      <div class="field"><label>售價</label><input type="number" id="f-retail"   placeholder="0" min="0" step="0.01" /></div>
-      <div class="field"><label>優惠價</label><input type="number" id="f-promo"  placeholder="0" min="0" step="0.01" /></div>
+      <div class="field admin-only-price"><label>進價</label><input type="number" id="f-cost" placeholder="0" min="0" step="0.01" /></div>
+      <div class="field admin-only-price"><label>批價</label><input type="number" id="f-wholesale" placeholder="0" min="0" step="0.01" /></div>
+      <div class="field"><label>售價</label><input type="number" id="f-retail" placeholder="0" min="0" step="0.01" /></div>
+      <div class="field admin-only-price"><label>優惠價</label><input type="number" id="f-promo" placeholder="0" min="0" step="0.01" /></div>
     </div>
 
     <div class="field"><label>備註</label><textarea id="f-note" placeholder="備註說明…"></textarea></div>
@@ -476,19 +496,54 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbw5OKFtcOOmnPBqG2TkBffvYm_a-nvDBepPJJTcqrr6YVWRoBYRu4bdt1ljxB_tNw3bDw/exec';
-//const PASSWORD = 'admin1234';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbzj9JGjIWTbGI7oHueYlXT56UO7AfX2R-UiB2r_pttFq5N6tuBq0fjv4fs4d5nr-wrmPw/exec';
 
-// LOGIN
-document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+let AUTH_TOKEN = localStorage.getItem('auth_token') || '';
+let USER_ROLE = localStorage.getItem('user_role') || '';
+
+let allItems = [];
+let imageBase64 = null;
+let editingId = null;
+
+document.getElementById('pwd-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function isAdmin() {
+  return USER_ROLE === 'admin';
+}
+
+function isBasic() {
+  return USER_ROLE === 'basic';
+}
+
+function updateRoleBadge() {
+  const badge = document.getElementById('role-badge');
+  badge.classList.remove('admin', 'basic');
+
+  if (isAdmin()) {
+    badge.textContent = '高級模式';
+    badge.classList.add('admin');
+  } else if (isBasic()) {
+    badge.textContent = '限制模式';
+    badge.classList.add('basic');
+  } else {
+    badge.textContent = '未登入';
+  }
+}
+
+function applyRoleUI() {
+  updateRoleBadge();
+
+  document.querySelectorAll('.admin-only-price').forEach(el => {
+    el.classList.toggle('basic-hide', !isAdmin());
+  });
+}
 
 async function doLogin() {
-
-  const pwd =
-    document.getElementById('pwd-input').value;
+  const pwd = document.getElementById('pwd-input').value;
 
   try {
-
     const res = await fetch(
       `${GAS_URL}?action=login&pwd=${encodeURIComponent(pwd)}`
     );
@@ -496,97 +551,107 @@ async function doLogin() {
     const data = await res.json();
 
     if (data.success) {
+      AUTH_TOKEN = data.token;
+      USER_ROLE = data.role;
 
-      // 原本：登入畫面切換
+      localStorage.setItem('auth_token', AUTH_TOKEN);
+      localStorage.setItem('user_role', USER_ROLE);
+
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
 
-      // 隱藏錯誤訊息（原本有）
       const errEl = document.getElementById('login-error');
       if (errEl) errEl.style.display = 'none';
 
-      // GAS banner（原本邏輯保留）
       if (GAS_URL) {
         const banner = document.getElementById('gas-banner');
         if (banner) banner.style.display = 'none';
       }
 
-      // 載入資料
+      applyRoleUI();
+      showToast(isAdmin() ? '已進入高級模式' : '已進入限制模式', 'success');
       loadItems();
 
     } else {
-
-      // 登入失敗（原本邏輯 + toast）
       const errEl = document.getElementById('login-error');
       if (errEl) errEl.style.display = 'block';
 
       document.getElementById('pwd-input').value = '';
-
       showToast('密碼錯誤', 'error');
-
     }
 
   } catch (err) {
-
     showToast('連線失敗', 'error');
-
     console.error(err);
-
   }
 }
-  
+
 function doLogout() {
+  AUTH_TOKEN = '';
+  USER_ROLE = '';
+
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('user_role');
+
+  allItems = [];
+  imageBase64 = null;
+  editingId = null;
+
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('pwd-input').value = '';
+
+  updateRoleBadge();
 }
 
-// GAS URL
 function promptGasUrl() {
   const url = prompt('請輸入 Google Apps Script Web App URL：', GAS_URL);
+
   if (url && url.trim()) {
     GAS_URL = url.trim();
     localStorage.setItem('gas_url', GAS_URL);
     document.getElementById('gas-banner').style.display = 'none';
-    loadItems();
+
+    if (AUTH_TOKEN) loadItems();
   }
 }
 
-// STATE
-let allItems    = [];
-let imageBase64 = null;
-let editingId   = null;
-
-// ── LIGHTBOX ──
 function openLightbox(src) {
   document.getElementById('lightbox-img').src = src;
   document.getElementById('lightbox').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+
 function closeLightbox(e) {
-  // 如果是 img 本身觸發就忽略（已在 HTML 裡 stopPropagation）
   if (e && e.target === document.getElementById('lightbox-img')) return;
   document.getElementById('lightbox').classList.remove('open');
   document.body.style.overflow = '';
 }
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLightbox();
 });
 
-// ── THUMBNAIL helper ──
-function thumbHTML(imageData, size) {
-  // size: '' = table (42px), 'lg' = card (54px)
+function thumbHTML(imageData) {
   if (!imageData) return `<div class="img-placeholder">📦</div>`;
+
   const src = `data:image/jpeg;base64,${esc(imageData)}`;
+
   return `<div class="thumb-wrap" onclick="openLightbox('${src}')">
     <img class="item-img" src="${src}" />
     <div class="zoom-hint">🔍</div>
   </div>`;
 }
 
-// ── PRICE GRID helper (table) ──
 function priceGridHTML(item) {
-  const fmt = v => v ? '$'+Number(v).toLocaleString() : '<span style="color:var(--muted);font-size:11px;">—</span>';
+  const fmt = v => v ? '$' + Number(v).toLocaleString() : '<span style="color:var(--muted);font-size:11px;">—</span>';
+
+  if (!isAdmin()) {
+    return `<div class="price-grid basic-price">
+      <div class="price-item"><span class="pl">售價</span><span class="pv c3">${fmt(item.retail)}</span></div>
+    </div>`;
+  }
+
   return `<div class="price-grid">
     <div class="price-item"><span class="pl">進價</span><span class="pv c1">${fmt(item.cost)}</span></div>
     <div class="price-item"><span class="pl">批價</span><span class="pv c2">${fmt(item.wholesale)}</span></div>
@@ -595,14 +660,20 @@ function priceGridHTML(item) {
   </div>`;
 }
 
-// ── PRICE BADGES helper (card) ──
 function priceBadgesHTML(item) {
-  const defs = [
-    { label:'進', key:'cost',      cls:'c1' },
-    { label:'批', key:'wholesale', cls:'c2' },
-    { label:'售', key:'retail',    cls:'c3' },
-    { label:'惠', key:'promo',     cls:'c4' },
+  const basicDefs = [
+    { label: '售', key: 'retail', cls: 'c3' }
   ];
+
+  const adminDefs = [
+    { label: '進', key: 'cost', cls: 'c1' },
+    { label: '批', key: 'wholesale', cls: 'c2' },
+    { label: '售', key: 'retail', cls: 'c3' },
+    { label: '惠', key: 'promo', cls: 'c4' },
+  ];
+
+  const defs = isAdmin() ? adminDefs : basicDefs;
+
   return defs.filter(d => item[d.key]).map(d =>
     `<span class="pbadge">
        <span class="pbl">${d.label}</span>
@@ -611,100 +682,164 @@ function priceBadgesHTML(item) {
   ).join('') || '<span style="color:var(--muted);font-size:12px;">未設定</span>';
 }
 
-// ── IMAGE COMPRESSION ──
-const MAX_BYTES    = 50 * 1024;
+const MAX_BYTES = 50 * 1024;
 const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3);
 
 async function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onerror = () => reject(new Error('讀取失敗'));
+
     reader.onload = ev => {
       const img = new Image();
+
       img.onerror = () => reject(new Error('圖片解碼失敗'));
+
       img.onload = () => {
         for (let maxDim of [400, 300, 200, 150]) {
-          const scale  = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const width  = Math.round(img.width  * scale);
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const width = Math.round(img.width * scale);
           const height = Math.round(img.height * scale);
+
           const canvas = document.createElement('canvas');
-          canvas.width = width; canvas.height = height;
+          canvas.width = width;
+          canvas.height = height;
+
           canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
           for (let q = 0.85; q >= 0.1; q -= 0.1) {
             const dataUrl = canvas.toDataURL('image/jpeg', q);
-            const base64  = dataUrl.split(',')[1];
+            const base64 = dataUrl.split(',')[1];
+
             if (base64.length <= BASE64_LIMIT) {
-              resolve({ dataUrl, base64, sizeKB: Math.round(base64.length * 3 / 4 / 1024) });
+              resolve({
+                dataUrl,
+                base64,
+                sizeKB: Math.round(base64.length * 3 / 4 / 1024)
+              });
               return;
             }
           }
         }
+
         reject(new Error('圖片太複雜，無法壓縮至 50KB'));
       };
+
       img.src = ev.target.result;
     };
+
     reader.readAsDataURL(file);
   });
 }
 
-// LOAD
 async function loadItems() {
   if (!GAS_URL) return;
+  if (!AUTH_TOKEN) {
+    showToast('請先登入', 'error');
+    return;
+  }
+
   setLoading(true);
+
   try {
-    const res  = await fetch(`${GAS_URL}?action=getAll`);
+    const res = await fetch(
+      `${GAS_URL}?action=getAll&token=${encodeURIComponent(AUTH_TOKEN)}`
+    );
+
     const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '讀取失敗');
+    }
+
+    if (data.role) {
+      USER_ROLE = data.role;
+      localStorage.setItem('user_role', USER_ROLE);
+      applyRoleUI();
+    }
+
     allItems = data.items || [];
     renderAll(allItems);
-  } catch(e) {
+
+  } catch (e) {
     showToast('讀取失敗：' + e.message, 'error');
-    setLoading(false);
+
+    if (String(e.message).includes('未登入') || String(e.message).includes('過期')) {
+      doLogout();
+    }
   }
 }
 
 function setLoading(on) {
   if (!on) return;
+
   document.getElementById('item-tbody').innerHTML =
     `<tr class="loading-row"><td colspan="6"><span class="spinner"></span>載入中…</td></tr>`;
+
   document.getElementById('card-list').innerHTML =
     '<div style="text-align:center;padding:32px;color:var(--muted)"><span class="spinner"></span>載入中…</div>';
 }
 
-// RENDER
-function renderAll(items) { renderTable(items); renderCards(items); updateStats(items); }
+function renderAll(items) {
+  renderTable(items);
+  renderCards(items);
+  updateStats(items);
+}
+
+function actionHTML(item) {
+  if (!isAdmin()) {
+    return `<span class="restricted-text">限制模式</span>`;
+  }
+
+  return `<div class="actions">
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
+    <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
+  </div>`;
+}
+
+function cardActionHTML(item) {
+  if (!isAdmin()) {
+    return `<div class="restricted-text">限制模式：不可編輯或刪除</div>`;
+  }
+
+  return `<div class="item-card-actions">
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
+    <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
+  </div>`;
+}
 
 function renderTable(items) {
   const tbody = document.getElementById('item-tbody');
+
   if (!items.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">📭</div><p>目前沒有品項</p></div></td></tr>`;
     return;
   }
+
   tbody.innerHTML = items.map(item => `
     <tr>
       <td>${thumbHTML(item.imageData)}</td>
       <td><strong>${esc(item.name)}</strong></td>
       <td><span class="qty-badge">${esc(String(item.qty))}</span></td>
       <td>${priceGridHTML(item)}</td>
-      <td><span class="note-text">${esc(item.note||'—')}</span></td>
-      <td>
-        <div class="actions">
-          <button class="btn-edit"   onclick="openEdit('${esc(item.id)}')">編輯</button>
-          <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
-        </div>
-      </td>
+      <td><span class="note-text">${esc(item.note || '—')}</span></td>
+      <td>${actionHTML(item)}</td>
     </tr>`).join('');
 }
 
 function renderCards(items) {
   const list = document.getElementById('card-list');
+
   if (!items.length) {
     list.innerHTML = `<div class="empty-state"><div class="big">📭</div><p>目前沒有品項，點擊「新增」開始吧！</p></div>`;
     return;
   }
+
   list.innerHTML = items.map(item => `
     <div class="item-card">
       <div class="item-card-top">
-        ${thumbHTML(item.imageData, 'lg')}
+        ${thumbHTML(item.imageData)}
         <div class="item-card-info">
           <div class="item-card-name">${esc(item.name)}</div>
           <div class="item-card-meta">
@@ -714,52 +849,62 @@ function renderCards(items) {
           ${item.note ? `<div class="item-card-note">${esc(item.note)}</div>` : ''}
         </div>
       </div>
-      <div class="item-card-actions">
-        <button class="btn-edit"   onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
-        <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
-      </div>
+      ${cardActionHTML(item)}
     </div>`).join('');
 }
 
 function updateStats(items) {
   document.getElementById('stat-count').textContent = items.length;
-  document.getElementById('stat-qty').textContent   = items.reduce((s,i)=>s+Number(i.qty||0),0).toLocaleString();
-  // 統計值用售價
-  document.getElementById('stat-value').textContent = '$'+items.reduce((s,i)=>s+Number(i.qty||0)*Number(i.retail||0),0).toLocaleString();
+
+  document.getElementById('stat-qty').textContent =
+    items.reduce((s, i) => s + Number(i.qty || 0), 0).toLocaleString();
+
+  document.getElementById('stat-value').textContent =
+    '$' + items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.retail || 0), 0).toLocaleString();
 }
 
-// SEARCH
 function filterItems() {
   const q = document.getElementById('search-input').value.trim().toLowerCase();
-  renderAll(q ? allItems.filter(i=>i.name.toLowerCase().includes(q)) : allItems);
+  renderAll(q ? allItems.filter(i => i.name.toLowerCase().includes(q)) : allItems);
 }
 
-// MODAL
 function openModal() {
   editingId = null;
+
   document.getElementById('modal-title').textContent = '新增品項';
   document.getElementById('modal-submit-btn').textContent = '新增品項';
   document.getElementById('edit-id').value = '';
   document.getElementById('progress-msg').textContent = '';
+
   resetForm();
+  applyRoleUI();
+
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
 
 function openEdit(id) {
+  if (!isAdmin()) {
+    showToast('限制模式不能編輯', 'error');
+    return;
+  }
+
   const item = allItems.find(i => i.id === id);
   if (!item) return;
+
   editingId = id;
+
   document.getElementById('modal-title').textContent = '編輯品項';
   document.getElementById('modal-submit-btn').textContent = '儲存變更';
-  document.getElementById('edit-id').value    = id;
-  document.getElementById('f-name').value     = item.name;
-  document.getElementById('f-qty').value      = item.qty;
-  document.getElementById('f-cost').value      = item.cost      || '';
+  document.getElementById('edit-id').value = id;
+
+  document.getElementById('f-name').value = item.name;
+  document.getElementById('f-qty').value = item.qty;
+  document.getElementById('f-cost').value = item.cost || '';
   document.getElementById('f-wholesale').value = item.wholesale || '';
-  document.getElementById('f-retail').value    = item.retail    || '';
-  document.getElementById('f-promo').value     = item.promo     || '';
-  document.getElementById('f-note').value      = item.note      || '';
+  document.getElementById('f-retail').value = item.retail || '';
+  document.getElementById('f-promo').value = item.promo || '';
+  document.getElementById('f-note').value = item.note || '';
   document.getElementById('progress-msg').textContent = '';
   document.getElementById('img-size-hint').textContent = '';
 
@@ -770,7 +915,10 @@ function openEdit(id) {
   } else {
     removeImage();
   }
+
   imageBase64 = null;
+  applyRoleUI();
+
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
@@ -784,6 +932,7 @@ function closeModal() {
 function resetForm() {
   ['f-name','f-qty','f-cost','f-wholesale','f-retail','f-promo','f-note']
     .forEach(id => document.getElementById(id).value = '');
+
   document.getElementById('img-size-hint').textContent = '';
   removeImage();
 }
@@ -792,21 +941,26 @@ document.getElementById('modal').addEventListener('click', e => {
   if (e.target === document.getElementById('modal')) closeModal();
 });
 
-// IMAGE SELECT & COMPRESS
 async function handleImageSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
+
   setProgress('🗜️ 壓縮圖片中…');
   document.getElementById('img-size-hint').textContent = '';
+
   try {
     const result = await compressImage(file);
+
     imageBase64 = result.base64;
+
     document.getElementById('preview-img').src = result.dataUrl;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
     document.getElementById('img-size-hint').textContent = `壓縮後約 ${result.sizeKB} KB`;
+
     setProgress('');
-  } catch(err) {
+
+  } catch (err) {
     showToast(err.message, 'error');
     setProgress('');
   }
@@ -824,27 +978,51 @@ function setProgress(msg) {
   document.getElementById('progress-msg').textContent = msg;
 }
 
-// SUBMIT
 async function submitItem() {
-  if (!GAS_URL) { showToast('請先設定 Apps Script URL', 'error'); return; }
-  const name      = document.getElementById('f-name').value.trim();
-  const qty       = document.getElementById('f-qty').value.trim();
-  const cost      = document.getElementById('f-cost').value.trim();
-  const wholesale = document.getElementById('f-wholesale').value.trim();
-  const retail    = document.getElementById('f-retail').value.trim();
-  const promo     = document.getElementById('f-promo').value.trim();
-  const note      = document.getElementById('f-note').value.trim();
-  if (!name)     { showToast('請輸入品項名稱', 'error'); return; }
-  if (qty === '') { showToast('請輸入數量',   'error'); return; }
+  if (!GAS_URL) {
+    showToast('請先設定 Apps Script URL', 'error');
+    return;
+  }
 
-  const btn    = document.getElementById('modal-submit-btn');
+  if (!AUTH_TOKEN) {
+    showToast('請先登入', 'error');
+    return;
+  }
+
   const isEdit = !!editingId;
+
+  if (isEdit && !isAdmin()) {
+    showToast('限制模式不能編輯', 'error');
+    return;
+  }
+
+  const name = document.getElementById('f-name').value.trim();
+  const qty = document.getElementById('f-qty').value.trim();
+  const cost = document.getElementById('f-cost').value.trim();
+  const wholesale = document.getElementById('f-wholesale').value.trim();
+  const retail = document.getElementById('f-retail').value.trim();
+  const promo = document.getElementById('f-promo').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+
+  if (!name) {
+    showToast('請輸入品項名稱', 'error');
+    return;
+  }
+
+  if (qty === '') {
+    showToast('請輸入數量', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('modal-submit-btn');
+
   btn.disabled = true;
   setProgress('💾 儲存中…');
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
     let imageParam = '';
+
     if (isEdit) {
       imageParam = imageBase64 ? imageBase64 : '__keep__';
     } else {
@@ -852,14 +1030,18 @@ async function submitItem() {
     }
 
     const params = new URLSearchParams({
+      token: AUTH_TOKEN,
       action: isEdit ? 'edit' : 'add',
-      name, qty: Number(qty),
-      cost:      Number(cost)      || 0,
-      wholesale: Number(wholesale) || 0,
-      retail:    Number(retail)    || 0,
-      promo:     Number(promo)     || 0,
-      note, image: imageParam
+      name,
+      qty: Number(qty),
+      cost: isAdmin() ? Number(cost) || 0 : 0,
+      wholesale: isAdmin() ? Number(wholesale) || 0 : 0,
+      retail: Number(retail) || 0,
+      promo: isAdmin() ? Number(promo) || 0 : 0,
+      note,
+      image: imageParam
     });
+
     if (isEdit) params.set('id', editingId);
 
     const res = await fetch(GAS_URL, {
@@ -868,16 +1050,18 @@ async function submitItem() {
       body: params.toString()
     });
 
-    let data;
-    try { data = await res.json(); } catch(_) { data = { success: true }; }
-    if (data && data.success === false) throw new Error(data.error || '伺服器回傳錯誤');
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '伺服器回傳錯誤');
+    }
 
     setProgress('');
     showToast(isEdit ? '已儲存變更！' : '新增成功！', 'success');
     closeModal();
     loadItems();
 
-  } catch(e) {
+  } catch (e) {
     setProgress('');
     showToast('操作失敗：' + e.message, 'error');
   } finally {
@@ -886,39 +1070,64 @@ async function submitItem() {
   }
 }
 
-// DELETE
 async function deleteItem(id, name) {
+  if (!isAdmin()) {
+    showToast('限制模式不能刪除', 'error');
+    return;
+  }
+
   if (!confirm(`確定要刪除「${name}」嗎？`)) return;
+
   try {
-    const params = new URLSearchParams({ action: 'delete', id });
-    fetch(GAS_URL, {
+    const params = new URLSearchParams({
+      token: AUTH_TOKEN,
+      action: 'delete',
+      id
+    });
+
+    const res = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
     });
-    await new Promise(r => setTimeout(r, 1000));
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '刪除失敗');
+    }
+
     showToast('已刪除「' + name + '」', 'success');
     loadItems();
-  } catch(e) {
+
+  } catch (e) {
     showToast('刪除失敗：' + e.message, 'error');
   }
 }
 
-// TOAST
 let toastTimer;
-function showToast(msg, type='success') {
+
+function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
-  t.textContent = (type==='success'?'✅ ':'❌ ') + msg;
+
+  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
   t.className = 'toast ' + type;
+
   requestAnimationFrame(() => t.classList.add('show'));
+
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// UTIL
 function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
+
+applyRoleUI();
 </script>
 </body>
 </html>

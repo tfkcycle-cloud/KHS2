@@ -496,7 +496,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbzj9JGjIWTbGI7oHueYlXT56UO7AfX2R-UiB2r_pttFq5N6tuBq0fjv4fs4d5nr-wrmPw/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwWRcyG5RhOiEiKvpoZXvGF5jPLbctVwKM9nh3lkrIYagtWqMUxdtpKrccR573XKfetcQ/exec';
 
 let AUTH_TOKEN = localStorage.getItem('auth_token') || '';
 let USER_ROLE = localStorage.getItem('user_role') || '';
@@ -735,6 +735,7 @@ async function compressImage(file) {
 
 async function loadItems() {
   if (!GAS_URL) return;
+
   if (!AUTH_TOKEN) {
     showToast('請先登入', 'error');
     return;
@@ -788,10 +789,6 @@ function renderAll(items) {
 }
 
 function actionHTML(item) {
-  if (!isAdmin()) {
-    return `<span class="restricted-text">限制模式</span>`;
-  }
-
   return `<div class="actions">
     <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
@@ -799,10 +796,6 @@ function actionHTML(item) {
 }
 
 function cardActionHTML(item) {
-  if (!isAdmin()) {
-    return `<div class="restricted-text">限制模式：不可編輯或刪除</div>`;
-  }
-
   return `<div class="item-card-actions">
     <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
@@ -884,11 +877,6 @@ function openModal() {
 }
 
 function openEdit(id) {
-  if (!isAdmin()) {
-    showToast('限制模式不能編輯', 'error');
-    return;
-  }
-
   const item = allItems.find(i => i.id === id);
   if (!item) return;
 
@@ -900,13 +888,20 @@ function openEdit(id) {
 
   document.getElementById('f-name').value = item.name;
   document.getElementById('f-qty').value = item.qty;
-  document.getElementById('f-cost').value = item.cost || '';
-  document.getElementById('f-wholesale').value = item.wholesale || '';
   document.getElementById('f-retail').value = item.retail || '';
-  document.getElementById('f-promo').value = item.promo || '';
   document.getElementById('f-note').value = item.note || '';
   document.getElementById('progress-msg').textContent = '';
   document.getElementById('img-size-hint').textContent = '';
+
+  if (isAdmin()) {
+    document.getElementById('f-cost').value = item.cost || '';
+    document.getElementById('f-wholesale').value = item.wholesale || '';
+    document.getElementById('f-promo').value = item.promo || '';
+  } else {
+    document.getElementById('f-cost').value = '';
+    document.getElementById('f-wholesale').value = '';
+    document.getElementById('f-promo').value = '';
+  }
 
   if (item.imageData) {
     document.getElementById('preview-img').src = 'data:image/jpeg;base64,' + item.imageData;
@@ -991,11 +986,6 @@ async function submitItem() {
 
   const isEdit = !!editingId;
 
-  if (isEdit && !isAdmin()) {
-    showToast('限制模式不能編輯', 'error');
-    return;
-  }
-
   const name = document.getElementById('f-name').value.trim();
   const qty = document.getElementById('f-qty').value.trim();
   const cost = document.getElementById('f-cost').value.trim();
@@ -1036,7 +1026,7 @@ async function submitItem() {
       qty: Number(qty),
       cost: isAdmin() ? Number(cost) || 0 : 0,
       wholesale: isAdmin() ? Number(wholesale) || 0 : 0,
-      retail: Number(retail) || 0,
+      retail: isAdmin() ? Number(retail) || 0 : 0,
       promo: isAdmin() ? Number(promo) || 0 : 0,
       note,
       image: imageParam
@@ -1071,11 +1061,6 @@ async function submitItem() {
 }
 
 async function deleteItem(id, name) {
-  if (!isAdmin()) {
-    showToast('限制模式不能刪除', 'error');
-    return;
-  }
-
   if (!confirm(`確定要刪除「${name}」嗎？`)) return;
 
   try {

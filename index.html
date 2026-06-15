@@ -496,7 +496,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyFUvdJm0t6p0cGriqrx-NUzs2nJ_A_xXihmg2QSJvQNEX06gHEvks9IVhNk2NFdL8Bww/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbygtYpujiDltIu7VXoaBUTWeYdxzjL7amsz1Ky2VeicBIeswKpf3uRRYmFgUYwmb1ktAQ/exec';
 
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
@@ -803,27 +803,15 @@ function renderAll(items) {
 }
 
 function actionHTML(item) {
-  const editBtn = `<button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>`;
-
-  if (!isAdmin()) {
-    return `<div class="actions">${editBtn}<span class="restricted-text">不能刪除</span></div>`;
-  }
-
   return `<div class="actions">
-    ${editBtn}
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
   </div>`;
 }
 
 function cardActionHTML(item) {
-  const editBtn = `<button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>`;
-
-  if (!isAdmin()) {
-    return `<div class="item-card-actions">${editBtn}</div>`;
-  }
-
   return `<div class="item-card-actions">
-    ${editBtn}
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
   </div>`;
 }
@@ -1087,10 +1075,7 @@ async function submitItem() {
 }
 
 async function deleteItem(id, name) {
-  if (!isAdmin()) {
-    showToast('權限不足：只有高級模式可以刪除', 'error');
-    return;
-  }
+
 
   if (!AUTH_TOKEN) {
     showToast('請先登入', 'error');

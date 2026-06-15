@@ -496,10 +496,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyiJiQGl_tRvoedByC16xiIafzsUzUf-rhvA3Ya2EslQ77mOQUQrR1X6YOtko-jcMdlEg/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyFUvdJm0t6p0cGriqrx-NUzs2nJ_A_xXihmg2QSJvQNEX06gHEvks9IVhNk2NFdL8Bww/exec';
 
-let AUTH_TOKEN = localStorage.getItem('auth_token') || '';
-let USER_ROLE = localStorage.getItem('user_role') || '';
+let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
+let USER_ROLE = sessionStorage.getItem('user_role') || '';
 
 let allItems = [];
 let imageBase64 = null;
@@ -543,10 +543,22 @@ function applyRoleUI() {
 async function doLogin() {
   const pwd = document.getElementById('pwd-input').value;
 
+  if (!pwd) {
+    showToast('請輸入密碼', 'error');
+    return;
+  }
+
   try {
-    const res = await fetch(
-      `${GAS_URL}?action=login&pwd=${encodeURIComponent(pwd)}`
-    );
+    const params = new URLSearchParams({
+      action: 'login',
+      pwd
+    });
+
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
 
     const data = await res.json();
 
@@ -554,8 +566,8 @@ async function doLogin() {
       AUTH_TOKEN = data.token;
       USER_ROLE = data.role;
 
-      localStorage.setItem('auth_token', AUTH_TOKEN);
-      localStorage.setItem('user_role', USER_ROLE);
+      sessionStorage.setItem('auth_token', AUTH_TOKEN);
+      sessionStorage.setItem('user_role', USER_ROLE);
 
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
@@ -590,8 +602,8 @@ function doLogout() {
   AUTH_TOKEN = '';
   USER_ROLE = '';
 
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('user_role');
+  sessionStorage.removeItem('auth_token');
+  sessionStorage.removeItem('user_role');
 
   allItems = [];
   imageBase64 = null;
@@ -758,7 +770,7 @@ async function loadItems() {
 
     if (data.role) {
       USER_ROLE = data.role;
-      localStorage.setItem('user_role', USER_ROLE);
+      sessionStorage.setItem('user_role', USER_ROLE);
       applyRoleUI();
     }
 
@@ -791,15 +803,27 @@ function renderAll(items) {
 }
 
 function actionHTML(item) {
+  const editBtn = `<button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>`;
+
+  if (!isAdmin()) {
+    return `<div class="actions">${editBtn}<span class="restricted-text">不能刪除</span></div>`;
+  }
+
   return `<div class="actions">
-    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
+    ${editBtn}
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
   </div>`;
 }
 
 function cardActionHTML(item) {
+  const editBtn = `<button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>`;
+
+  if (!isAdmin()) {
+    return `<div class="item-card-actions">${editBtn}</div>`;
+  }
+
   return `<div class="item-card-actions">
-    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
+    ${editBtn}
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
   </div>`;
 }
@@ -1063,6 +1087,16 @@ async function submitItem() {
 }
 
 async function deleteItem(id, name) {
+  if (!isAdmin()) {
+    showToast('權限不足：只有高級模式可以刪除', 'error');
+    return;
+  }
+
+  if (!AUTH_TOKEN) {
+    showToast('請先登入', 'error');
+    return;
+  }
+
   if (!confirm(`確定要刪除「${name}」嗎？`)) return;
 
   try {
@@ -1111,10 +1145,27 @@ function esc(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-applyRoleUI();
+function boot() {
+  applyRoleUI();
+
+  if (AUTH_TOKEN) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    if (GAS_URL) {
+      const banner = document.getElementById('gas-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    loadItems();
+  }
+}
+
+boot();
 </script>
 </body>
 </html>

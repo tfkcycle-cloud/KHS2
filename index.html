@@ -327,6 +327,14 @@
     .img-upload-area .upload-icon { font-size: 26px; margin-bottom: 6px; }
     .img-upload-area p { font-size: 13px; color: var(--muted); }
     .img-upload-area input[type="file"] { display: none; }
+    .img-choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .btn-img-choice {
+      background: var(--card); border: 1px solid var(--border); border-radius: 9px;
+      color: var(--text); padding: 9px 10px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: border-color .2s, transform .1s;
+    }
+    .btn-img-choice:hover { border-color: var(--accent); }
+    .btn-img-choice:active { transform: scale(.98); }
     .img-preview { display: none; position: relative; margin-bottom: 4px; }
     .img-preview img {
       width: 100%; max-height: 140px; object-fit: cover;
@@ -463,11 +471,16 @@
         <img id="preview-img" src="" alt="預覽"/>
         <button class="remove-img" onclick="removeImage()">✕</button>
       </div>
-      <div class="img-upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="img-upload-area" id="upload-area">
         <input type="file" id="file-input" accept="image/*" onchange="handleImageSelect(event)" />
+        <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
-        <p>點擊上傳圖片</p>
+        <p>選擇圖片來源</p>
         <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（自動壓縮至 50KB 以內）</p>
+        <div class="img-choice-row">
+          <button type="button" class="btn-img-choice" onclick="document.getElementById('file-input').click()">相簿選擇</button>
+          <button type="button" class="btn-img-choice" onclick="document.getElementById('camera-input').click()">現場拍照</button>
+        </div>
       </div>
       <div class="img-size-hint" id="img-size-hint"></div>
     </div>
@@ -496,13 +509,14 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyj7l6dQJAVwVV1wWwFVjxR4ssPt1vHrwUSDCTZhAqbFWH6cXCE539kE8QO68ucswvqPA/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycby_riSaM2mhIi6MMh_VE8124hs_tao0scG-tPsAd81oW-MgdlXCsFolq-gjUDvWt_GM-A/exec';
 
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 
 let allItems = [];
 let imageBase64 = null;
+let imageMode = 'none'; // none / keep / new / remove
 let editingId = null;
 
 document.getElementById('pwd-input').addEventListener('keydown', e => {
@@ -607,6 +621,7 @@ function doLogout() {
 
   allItems = [];
   imageBase64 = null;
+  imageMode = 'none';
   editingId = null;
 
   document.getElementById('login-screen').style.display = 'flex';
@@ -634,6 +649,10 @@ function openLightbox(src) {
   document.body.style.overflow = 'hidden';
 }
 
+function openLightboxFromBase64(base64) {
+  openLightbox('data:image/jpeg;base64,' + base64);
+}
+
 function closeLightbox(e) {
   if (e && e.target === document.getElementById('lightbox-img')) return;
   document.getElementById('lightbox').classList.remove('open');
@@ -647,9 +666,10 @@ document.addEventListener('keydown', e => {
 function thumbHTML(imageData) {
   if (!imageData) return `<div class="img-placeholder">📦</div>`;
 
-  const src = `data:image/jpeg;base64,${esc(imageData)}`;
+  const safeBase64 = esc(imageData);
+  const src = `data:image/jpeg;base64,${safeBase64}`;
 
-  return `<div class="thumb-wrap" onclick="openLightbox('${src}')">
+  return `<div class="thumb-wrap" onclick="openLightboxFromBase64('${safeBase64}')">
     <img class="item-img" src="${src}" />
     <div class="zoom-hint">🔍</div>
   </div>`;
@@ -877,6 +897,7 @@ function filterItems() {
 
 function openModal() {
   editingId = null;
+  imageMode = 'none';
 
   document.getElementById('modal-title').textContent = '新增品項';
   document.getElementById('modal-submit-btn').textContent = '新增品項';
@@ -918,14 +939,17 @@ function openEdit(id) {
   }
 
   if (item.imageData) {
+    imageMode = 'keep';
+    imageBase64 = null;
+
     document.getElementById('preview-img').src = 'data:image/jpeg;base64,' + item.imageData;
     document.getElementById('img-preview').style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
   } else {
+    imageMode = 'none';
+    imageBase64 = null;
     removeImage();
   }
-
-  imageBase64 = null;
   applyRoleUI();
 
   document.getElementById('modal').classList.add('open');
@@ -934,8 +958,9 @@ function openEdit(id) {
 
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
-  resetForm();
   editingId = null;
+  imageMode = 'none';
+  resetForm();
 }
 
 function resetForm() {
@@ -961,6 +986,7 @@ async function handleImageSelect(e) {
     const result = await compressImage(file);
 
     imageBase64 = result.base64;
+    imageMode = 'new';
 
     document.getElementById('preview-img').src = result.dataUrl;
     document.getElementById('img-preview').style.display = 'block';
@@ -977,7 +1003,10 @@ async function handleImageSelect(e) {
 
 function removeImage() {
   imageBase64 = null;
+  imageMode = editingId ? 'remove' : 'none';
   document.getElementById('file-input').value = '';
+  const cameraInput = document.getElementById('camera-input');
+  if (cameraInput) cameraInput.value = '';
   document.getElementById('img-preview').style.display = 'none';
   document.getElementById('upload-area').style.display = 'block';
   document.getElementById('img-size-hint').textContent = '';
@@ -1028,7 +1057,13 @@ async function submitItem() {
     let imageParam = '';
 
     if (isEdit) {
-      imageParam = imageBase64 ? imageBase64 : '__keep__';
+      if (imageMode === 'new') {
+        imageParam = imageBase64 || '';
+      } else if (imageMode === 'remove') {
+        imageParam = '';
+      } else {
+        imageParam = '__keep__';
+      }
     } else {
       imageParam = imageBase64 || '';
     }

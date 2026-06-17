@@ -476,7 +476,7 @@
         <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>選擇圖片來源</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（自動壓縮至 30KB 以內）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（自動壓縮至 25KB 以內）</p>
         <div class="img-choice-row">
           <button type="button" class="btn-img-choice" onclick="document.getElementById('file-input').click()">相簿選擇</button>
           <button type="button" class="btn-img-choice" onclick="document.getElementById('camera-input').click()">現場拍照</button>
@@ -554,6 +554,48 @@ function applyRoleUI() {
   });
 }
 
+// 統一處理 fetch 逾時：避免 Apps Script 卡住時，畫面一直停在「儲存中」。
+// timeoutMs 預設 25 秒，超過就會主動中止請求。
+async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Apps Script 有時候錯誤會回 HTML，不一定是 JSON。
+// 所以先用 text() 接，再自己 JSON.parse，錯誤訊息會比較清楚。
+async function parseJsonResponse(res) {
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('非 JSON 回應內容：', text);
+    throw new Error('伺服器回傳不是 JSON，請確認 Apps Script URL 是 /exec，且已重新部署最新版');
+  }
+}
+
+// 統一把 fetch 錯誤轉成使用者看得懂的訊息。
+function getFetchErrorMessage(e) {
+  if (e.name === 'AbortError') {
+    return '操作逾時：Apps Script 回應太慢，請重新整理確認資料是否已更新';
+  }
+
+  if (String(e.message).includes('Failed to fetch')) {
+    return '連線失敗：可能是 Apps Script 暫時中斷、部署網址錯誤、網路不穩，或圖片資料太大';
+  }
+
+  return e.message || '未知錯誤';
+}
+
 async function doLogin() {
   const pwd = document.getElementById('pwd-input').value;
 
@@ -568,13 +610,13 @@ async function doLogin() {
       pwd
     });
 
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
     });
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
 
     if (data.success) {
       AUTH_TOKEN = data.token;
@@ -607,7 +649,7 @@ async function doLogin() {
     }
 
   } catch (err) {
-    showToast('連線失敗', 'error');
+    showToast(getFetchErrorMessage(err), 'error');
     console.error(err);
   }
 }
@@ -716,7 +758,7 @@ function priceBadgesHTML(item) {
   ).join('') || '<span style="color:var(--muted);font-size:12px;">未設定</span>';
 }
 
-const MAX_BYTES = 30 * 1024;
+const MAX_BYTES = 25 * 1024;
 const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3);
 
 async function compressImage(file) {
@@ -757,7 +799,7 @@ async function compressImage(file) {
           }
         }
 
-        reject(new Error('圖片太複雜，無法壓縮至 30KB'));
+        reject(new Error('圖片太複雜，無法壓縮至 25KB'));
       };
 
       img.src = ev.target.result;
@@ -778,18 +820,13 @@ async function loadItems(showLoadingUI = true, showErrorToast = true) {
   if (showLoadingUI) setLoading(true);
 
   try {
-    const res = await fetch(
-      `${GAS_URL}?action=getAll&token=${encodeURIComponent(AUTH_TOKEN)}`
+    const res = await fetchWithTimeout(
+      `${GAS_URL}?action=getAll&token=${encodeURIComponent(AUTH_TOKEN)}`,
+      {},
+      25000
     );
 
-    const text = await res.text();
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      throw new Error('伺服器回傳不是 JSON，請確認 Apps Script URL 是否為 /exec，且已重新部署');
-    }
+    const data = await parseJsonResponse(res);
 
     if (!data.success) {
       throw new Error(data.error || '讀取失敗');
@@ -806,9 +843,10 @@ async function loadItems(showLoadingUI = true, showErrorToast = true) {
     return true;
 
   } catch (e) {
-    if (showErrorToast) showToast('讀取失敗：' + e.message, 'error');
+    const msg = getFetchErrorMessage(e);
+    if (showErrorToast) showToast('讀取失敗：' + msg, 'error');
 
-    if (String(e.message).includes('未登入') || String(e.message).includes('過期')) {
+    if (String(msg).includes('未登入') || String(msg).includes('過期')) {
       doLogout();
     }
 
@@ -1093,13 +1131,13 @@ async function submitItem() {
 
     if (isEdit) params.set('id', editingId);
 
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
-    });
+    }, 25000);
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
 
     if (!data.success) {
       throw new Error(data.error || '伺服器回傳錯誤');
@@ -1148,7 +1186,7 @@ async function submitItem() {
 
   } catch (e) {
     setProgress('');
-    showToast('操作失敗：' + e.message, 'error');
+    showToast('操作失敗：' + getFetchErrorMessage(e), 'error');
   } finally {
     btn.textContent = isEdit ? '儲存變更' : '新增品項';
     btn.disabled = false;
@@ -1172,13 +1210,13 @@ async function deleteItem(id, name) {
       id
     });
 
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
-    });
+    }, 25000);
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
 
     if (!data.success) {
       throw new Error(data.error || '刪除失敗');
@@ -1188,7 +1226,7 @@ async function deleteItem(id, name) {
     loadItems();
 
   } catch (e) {
-    showToast('刪除失敗：' + e.message, 'error');
+    showToast('刪除失敗：' + getFetchErrorMessage(e), 'error');
   }
 }
 

@@ -194,18 +194,21 @@
 
     #lightbox {
       display: none; position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,.88);
+      background: rgba(0,0,0,.9);
       align-items: center; justify-content: center;
-      padding: 20px;
+      padding: 20px 54px;
       cursor: zoom-out;
+      touch-action: pan-y;
     }
     #lightbox.open { display: flex; }
-    #lightbox img {
-      max-width: min(90vw, 860px); max-height: 86vh;
+    #lightbox-img {
+      max-width: min(90vw, 860px); max-height: 84vh;
       border-radius: 12px; object-fit: contain;
       box-shadow: 0 32px 80px rgba(0,0,0,.7);
       animation: lbIn .2s ease;
       cursor: default;
+      user-select: none;
+      -webkit-user-drag: none;
     }
     @keyframes lbIn { from { opacity:0; transform:scale(.92); } to { opacity:1; transform:scale(1); } }
     #lightbox-close {
@@ -215,7 +218,33 @@
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: background .18s; z-index: 501;
     }
-    #lightbox-close:hover { background: rgba(255,255,255,.25); }
+    #lightbox-close:hover,
+    .lightbox-nav:hover { background: rgba(255,255,255,.25); }
+    .lightbox-nav {
+      position: fixed; top: 50%; transform: translateY(-50%);
+      width: 42px; height: 54px; border: none; border-radius: 14px;
+      background: rgba(255,255,255,.12); color: #fff; font-size: 26px;
+      cursor: pointer; z-index: 501; display: none;
+      align-items: center; justify-content: center;
+      transition: background .18s, opacity .18s;
+    }
+    #lightbox-prev { left: 14px; }
+    #lightbox-next { right: 14px; }
+    #lightbox.has-many .lightbox-nav { display: flex; }
+    .lightbox-counter {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px; color: #fff; padding: 5px 12px; font-size: 12px;
+      display: none; z-index: 501;
+    }
+    #lightbox.has-many .lightbox-counter { display: block; }
+    .thumb-count {
+      position: absolute; right: -5px; bottom: -5px;
+      background: var(--accent); color: #fff; border: 2px solid var(--surface);
+      border-radius: 999px; min-width: 20px; height: 20px; padding: 0 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
 
     .qty-badge {
       background: rgba(79,142,247,.15); color: var(--accent);
@@ -335,14 +364,20 @@
     }
     .btn-img-choice:hover { border-color: var(--accent); }
     .btn-img-choice:active { transform: scale(.98); }
-    .img-preview { display: none; position: relative; margin-bottom: 4px; }
-    .img-preview img {
-      width: 100%; max-height: 140px; object-fit: cover;
-      border-radius: 10px; border: 1px solid var(--border);
+    .img-preview {
+      display: none; gap: 8px; margin-bottom: 10px; overflow-x: auto;
+      padding-bottom: 4px; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
     }
-    .img-preview .remove-img {
-      position: absolute; top: 7px; right: 7px; background: rgba(0,0,0,.7);
-      border: none; border-radius: 50%; width: 24px; height: 24px;
+    .preview-card {
+      flex: 0 0 82px; height: 82px; position: relative; scroll-snap-align: start;
+      border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .preview-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .preview-card .remove-img {
+      position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,.72);
+      border: none; border-radius: 50%; width: 23px; height: 23px;
       color: #fff; cursor: pointer; font-size: 13px;
       display: flex; align-items: center; justify-content: center;
     }
@@ -382,6 +417,9 @@
       .card-list  { display: flex; }
       header { padding: 0 14px; }
       .role-badge { display: none; }
+      #lightbox { padding: 16px; }
+      .lightbox-nav { display: none !important; }
+      #lightbox-img { max-width: 94vw; max-height: 82vh; }
     }
     @media (min-width: 601px) {
       .toast { left: auto; max-width: 340px; }
@@ -457,7 +495,10 @@
 
 <div id="lightbox" onclick="closeLightbox(event)">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav" id="lightbox-prev" onclick="event.stopPropagation(); moveLightbox(-1)">‹</button>
   <img id="lightbox-img" src="" alt="放大圖片" onclick="event.stopPropagation()" />
+  <button class="lightbox-nav" id="lightbox-next" onclick="event.stopPropagation(); moveLightbox(1)">›</button>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
 </div>
 
 <div class="modal-overlay" id="modal">
@@ -466,17 +507,14 @@
     <input type="hidden" id="edit-id" />
 
     <div class="field">
-      <label>圖片（選填）</label>
-      <div class="img-preview" id="img-preview">
-        <img id="preview-img" src="" alt="預覽"/>
-        <button class="remove-img" onclick="removeImage()">✕</button>
-      </div>
+      <label>圖片（選填，最多 5 張）</label>
+      <div class="img-preview" id="img-preview"></div>
       <div class="img-upload-area" id="upload-area">
-        <input type="file" id="file-input" accept="image/*" onchange="handleImageSelect(event)" />
+        <input type="file" id="file-input" accept="image/*" multiple onchange="handleImageSelect(event)" />
         <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>選擇圖片來源</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（自動壓縮至 25KB 以內）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 25KB 以內）</p>
         <div class="img-choice-row">
           <button type="button" class="btn-img-choice" onclick="document.getElementById('file-input').click()">相簿選擇</button>
           <button type="button" class="btn-img-choice" onclick="document.getElementById('camera-input').click()">現場拍照</button>
@@ -509,15 +547,19 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycby_riSaM2mhIi6MMh_VE8124hs_tao0scG-tPsAd81oW-MgdlXCsFolq-gjUDvWt_GM-A/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbzOdT7TnupfH5ToZxrezD1nwuf3sZRvRostwUgHs4ucJwrPVRsWNAABm871WAadejQgzw/exec';
 
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 
 let allItems = [];
-let imageBase64 = null;
-let imageMode = 'none'; // none / keep / new / remove
+let selectedImages = [];
 let editingId = null;
+let lightboxImages = [];
+let lightboxIndex = 0;
+let lightboxTouchX = 0;
+
+const MAX_IMAGES = 5;
 
 document.getElementById('pwd-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
@@ -662,8 +704,7 @@ function doLogout() {
   sessionStorage.removeItem('user_role');
 
   allItems = [];
-  imageBase64 = null;
-  imageMode = 'none';
+  selectedImages = [];
   editingId = null;
 
   document.getElementById('login-screen').style.display = 'flex';
@@ -685,35 +726,81 @@ function promptGasUrl() {
   }
 }
 
-function openLightbox(src) {
-  document.getElementById('lightbox-img').src = src;
-  document.getElementById('lightbox').classList.add('open');
+function imageSrc(base64) {
+  return 'data:image/jpeg;base64,' + base64;
+}
+
+function getItemImages(item) {
+  if (!item) return [];
+  if (Array.isArray(item.images)) return item.images.filter(Boolean);
+  return item.imageData ? [item.imageData] : [];
+}
+
+function openLightbox(images, index = 0) {
+  lightboxImages = images.filter(Boolean);
+  if (!lightboxImages.length) return;
+
+  lightboxIndex = Math.max(0, Math.min(index, lightboxImages.length - 1));
+  renderLightboxImage();
+
+  const box = document.getElementById('lightbox');
+  box.classList.toggle('has-many', lightboxImages.length > 1);
+  box.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function openLightboxFromBase64(base64) {
-  openLightbox('data:image/jpeg;base64,' + base64);
+function openItemLightbox(id, index = 0) {
+  const item = allItems.find(i => i.id === id);
+  openLightbox(getItemImages(item), index);
+}
+
+function renderLightboxImage() {
+  document.getElementById('lightbox-img').src = imageSrc(lightboxImages[lightboxIndex]);
+  document.getElementById('lightbox-counter').textContent = `${lightboxIndex + 1} / ${lightboxImages.length}`;
+}
+
+function moveLightbox(delta) {
+  if (lightboxImages.length <= 1) return;
+  lightboxIndex = (lightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
+  renderLightboxImage();
 }
 
 function closeLightbox(e) {
   if (e && e.target === document.getElementById('lightbox-img')) return;
-  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox').classList.remove('open', 'has-many');
   document.body.style.overflow = '';
 }
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLightbox();
+  if (document.getElementById('lightbox').classList.contains('open')) {
+    if (e.key === 'ArrowLeft') moveLightbox(-1);
+    if (e.key === 'ArrowRight') moveLightbox(1);
+  }
 });
 
-function thumbHTML(imageData) {
-  if (!imageData) return `<div class="img-placeholder">📦</div>`;
+document.getElementById('lightbox').addEventListener('touchstart', e => {
+  lightboxTouchX = e.changedTouches[0].clientX;
+}, { passive: true });
 
-  const safeBase64 = esc(imageData);
-  const src = `data:image/jpeg;base64,${safeBase64}`;
+document.getElementById('lightbox').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - lightboxTouchX;
+  if (Math.abs(dx) > 45) moveLightbox(dx > 0 ? -1 : 1);
+}, { passive: true });
 
-  return `<div class="thumb-wrap" onclick="openLightboxFromBase64('${safeBase64}')">
+function thumbHTML(item) {
+  const images = getItemImages(item);
+  if (!images.length) return `<div class="img-placeholder">📦</div>`;
+
+  const safeId = esc(item.id);
+  const safeBase64 = esc(images[0]);
+  const src = imageSrc(safeBase64);
+  const count = images.length > 1 ? `<span class="thumb-count">${images.length}</span>` : '';
+
+  return `<div class="thumb-wrap" onclick="openItemLightbox('${safeId}', 0)">
     <img class="item-img" src="${src}" />
     <div class="zoom-hint">🔍</div>
+    ${count}
   </div>`;
 }
 
@@ -894,7 +981,7 @@ function renderTable(items) {
 
   tbody.innerHTML = items.map(item => `
     <tr>
-      <td>${thumbHTML(item.imageData)}</td>
+      <td>${thumbHTML(item)}</td>
       <td><strong>${esc(item.name)}</strong></td>
       <td><span class="qty-badge">${esc(String(item.qty))}</span></td>
       <td>${priceGridHTML(item)}</td>
@@ -914,7 +1001,7 @@ function renderCards(items) {
   list.innerHTML = items.map(item => `
     <div class="item-card">
       <div class="item-card-top">
-        ${thumbHTML(item.imageData)}
+        ${thumbHTML(item)}
         <div class="item-card-info">
           <div class="item-card-name">${esc(item.name)}</div>
           <div class="item-card-meta">
@@ -945,7 +1032,7 @@ function filterItems() {
 
 function openModal() {
   editingId = null;
-  imageMode = 'none';
+  selectedImages = [];
 
   document.getElementById('modal-title').textContent = '新增品項';
   document.getElementById('modal-submit-btn').textContent = '新增品項';
@@ -986,18 +1073,8 @@ function openEdit(id) {
     document.getElementById('f-wholesale').value = '';
   }
 
-  if (item.imageData) {
-    imageMode = 'keep';
-    imageBase64 = null;
-
-    document.getElementById('preview-img').src = 'data:image/jpeg;base64,' + item.imageData;
-    document.getElementById('img-preview').style.display = 'block';
-    document.getElementById('upload-area').style.display = 'none';
-  } else {
-    imageMode = 'none';
-    imageBase64 = null;
-    removeImage();
-  }
+  selectedImages = getItemImages(item).slice(0, MAX_IMAGES);
+  renderImagePreview();
   applyRoleUI();
 
   document.getElementById('modal').classList.add('open');
@@ -1007,7 +1084,6 @@ function openEdit(id) {
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
   editingId = null;
-  imageMode = 'none';
   resetForm();
 }
 
@@ -1015,8 +1091,9 @@ function resetForm() {
   ['f-name','f-qty','f-cost','f-wholesale','f-retail','f-promo','f-note']
     .forEach(id => document.getElementById(id).value = '');
 
-  document.getElementById('img-size-hint').textContent = '';
-  removeImage();
+  selectedImages = [];
+  resetImageInputs();
+  renderImagePreview();
 }
 
 document.getElementById('modal').addEventListener('click', e => {
@@ -1024,40 +1101,76 @@ document.getElementById('modal').addEventListener('click', e => {
 });
 
 async function handleImageSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
 
-  setProgress('🗜️ 壓縮圖片中…');
+  const room = MAX_IMAGES - selectedImages.length;
+  if (room <= 0) {
+    showToast(`最多只能放 ${MAX_IMAGES} 張圖片`, 'error');
+    resetImageInputs();
+    return;
+  }
+
+  const chosen = files.slice(0, room);
+  if (files.length > room) {
+    showToast(`已達上限，只加入前 ${room} 張`, 'error');
+  }
+
   document.getElementById('img-size-hint').textContent = '';
 
   try {
-    const result = await compressImage(file);
+    for (let i = 0; i < chosen.length; i++) {
+      setProgress(`🗜️ 壓縮圖片中 ${i + 1} / ${chosen.length}…`);
+      const result = await compressImage(chosen[i]);
+      selectedImages.push(result.base64);
+    }
 
-    imageBase64 = result.base64;
-    imageMode = 'new';
-
-    document.getElementById('preview-img').src = result.dataUrl;
-    document.getElementById('img-preview').style.display = 'block';
-    document.getElementById('upload-area').style.display = 'none';
-    document.getElementById('img-size-hint').textContent = `壓縮後約 ${result.sizeKB} KB`;
-
+    renderImagePreview();
     setProgress('');
 
   } catch (err) {
     showToast(err.message, 'error');
     setProgress('');
+  } finally {
+    resetImageInputs();
   }
 }
 
-function removeImage() {
-  imageBase64 = null;
-  imageMode = editingId ? 'remove' : 'none';
+function renderImagePreview() {
+  const preview = document.getElementById('img-preview');
+  const hint = document.getElementById('img-size-hint');
+
+  if (!selectedImages.length) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    hint.textContent = '';
+    return;
+  }
+
+  preview.style.display = 'flex';
+  preview.innerHTML = selectedImages.map((base64, index) => `
+    <div class="preview-card">
+      <img src="${imageSrc(esc(base64))}" alt="圖片 ${index + 1}" />
+      <button type="button" class="remove-img" onclick="removeImage(${index})">✕</button>
+    </div>`).join('');
+
+  const totalKB = Math.round(selectedImages.reduce((sum, img) => sum + img.length * 3 / 4, 0) / 1024);
+  hint.textContent = `${selectedImages.length} / ${MAX_IMAGES} 張，約 ${totalKB} KB`;
+}
+
+function removeImage(index = null) {
+  if (index === null) {
+    selectedImages = [];
+  } else {
+    selectedImages.splice(index, 1);
+  }
+  renderImagePreview();
+}
+
+function resetImageInputs() {
   document.getElementById('file-input').value = '';
   const cameraInput = document.getElementById('camera-input');
   if (cameraInput) cameraInput.value = '';
-  document.getElementById('img-preview').style.display = 'none';
-  document.getElementById('upload-area').style.display = 'block';
-  document.getElementById('img-size-hint').textContent = '';
 }
 
 function setProgress(msg) {
@@ -1102,19 +1215,7 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    let imageParam = '';
-
-    if (isEdit) {
-      if (imageMode === 'new') {
-        imageParam = imageBase64 || '';
-      } else if (imageMode === 'remove') {
-        imageParam = '';
-      } else {
-        imageParam = '__keep__';
-      }
-    } else {
-      imageParam = imageBase64 || '';
-    }
+    const imageParam = JSON.stringify(selectedImages);
 
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
@@ -1126,7 +1227,8 @@ async function submitItem() {
       retail: Number(retail) || 0,
       promo: Number(promo) || 0,
       note,
-      image: imageParam
+      images: imageParam,
+      image: selectedImages[0] || ''
     });
 
     if (isEdit) params.set('id', editingId);
@@ -1161,13 +1263,8 @@ async function submitItem() {
       updatedItem.wholesale = Number(wholesale) || 0;
     }
 
-    if (imageMode === 'new') {
-      updatedItem.imageData = imageBase64 || '';
-    } else if (imageMode === 'remove') {
-      updatedItem.imageData = '';
-    } else if (!isEdit) {
-      updatedItem.imageData = imageBase64 || '';
-    }
+    updatedItem.images = [...selectedImages];
+    updatedItem.imageData = selectedImages[0] || '';
 
     if (isEdit) {
       allItems = allItems.map(item => item.id === savedId ? updatedItem : item);

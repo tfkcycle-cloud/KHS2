@@ -514,7 +514,7 @@
         <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>選擇圖片來源</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 25KB 以內）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 20KB 以內）</p>
         <div class="img-choice-row">
           <button type="button" class="btn-img-choice" onclick="document.getElementById('file-input').click()">相簿選擇</button>
           <button type="button" class="btn-img-choice" onclick="document.getElementById('camera-input').click()">現場拍照</button>
@@ -547,7 +547,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbzOdT7TnupfH5ToZxrezD1nwuf3sZRvRostwUgHs4ucJwrPVRsWNAABm871WAadejQgzw/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxb_SSWnePjusu-GNmsk2nX4GHNCPjIfQUj5mS0o64zyGQh2igkZb1_bn0ZBJvm3lwP/exec';
 
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
@@ -845,7 +845,7 @@ function priceBadgesHTML(item) {
   ).join('') || '<span style="color:var(--muted);font-size:12px;">未設定</span>';
 }
 
-const MAX_BYTES = 25 * 1024;
+const MAX_BYTES = 20 * 1024;
 const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3);
 
 async function compressImage(file) {
@@ -860,7 +860,7 @@ async function compressImage(file) {
       img.onerror = () => reject(new Error('圖片解碼失敗'));
 
       img.onload = () => {
-        for (let maxDim of [400, 300, 200, 150]) {
+        for (let maxDim of [360, 300, 240, 180, 140, 100]) {
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
           const width = Math.round(img.width * scale);
           const height = Math.round(img.height * scale);
@@ -871,7 +871,7 @@ async function compressImage(file) {
 
           canvas.getContext('2d').drawImage(img, 0, 0, width, height);
 
-          for (let q = 0.85; q >= 0.1; q -= 0.1) {
+          for (let q = 0.82; q >= 0.06; q -= 0.08) {
             const dataUrl = canvas.toDataURL('image/jpeg', q);
             const base64 = dataUrl.split(',')[1];
 
@@ -886,7 +886,7 @@ async function compressImage(file) {
           }
         }
 
-        reject(new Error('圖片太複雜，無法壓縮至 25KB'));
+        reject(new Error('圖片太複雜，無法壓縮至 20KB'));
       };
 
       img.src = ev.target.result;

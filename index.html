@@ -615,6 +615,7 @@ function getFetchErrorMessage(e) {
   return e.message || '未知錯誤';
 }
 
+// ==================== 登入與基本功能 ====================
 async function doLogin() {
   const pwd = document.getElementById('pwd-input').value;
   if (!pwd) return showToast('請輸入密碼', 'error');
@@ -667,6 +668,7 @@ function promptGasUrl() {
   }
 }
 
+// ==================== 圖片處理 ====================
 function imageSrc(base64) {
   return 'data:image/jpeg;base64,' + base64;
 }
@@ -693,6 +695,11 @@ function renderLightboxImage() {
   document.getElementById('lightbox-counter').textContent = `${lightboxIndex + 1} / ${lightboxImages.length}`;
 }
 
+function openItemLightbox(id, index = 0) {
+  const item = allItems.find(i => i.id === id);
+  openLightbox(getItemImages(item), index);
+}
+
 function thumbHTML(item) {
   const images = getItemImages(item);
   if (!images.length) return `<div class="img-placeholder">📦</div>`;
@@ -707,12 +714,59 @@ function thumbHTML(item) {
   </div>`;
 }
 
-function openItemLightbox(id, index = 0) {
-  const item = allItems.find(i => i.id === id);
-  openLightbox(getItemImages(item), index);
+// ==================== 價格顯示 ====================
+function priceGridHTML(item) {
+  const fmt = v => v ? '$' + Number(v).toLocaleString() : '<span style="color:var(--muted);font-size:11px;">—</span>';
+  if (!isAdmin()) {
+    return `<div class="price-grid">
+      <div class="price-item"><span class="pl">售價</span><span class="pv c3">${fmt(item.retail)}</span></div>
+      <div class="price-item"><span class="pl">優惠</span><span class="pv c4">${fmt(item.promo)}</span></div>
+    </div>`;
+  }
+  return `<div class="price-grid">
+    <div class="price-item"><span class="pl">進價</span><span class="pv c1">${fmt(item.cost)}</span></div>
+    <div class="price-item"><span class="pl">批價</span><span class="pv c2">${fmt(item.wholesale)}</span></div>
+    <div class="price-item"><span class="pl">售價</span><span class="pv c3">${fmt(item.retail)}</span></div>
+    <div class="price-item"><span class="pl">優惠</span><span class="pv c4">${fmt(item.promo)}</span></div>
+  </div>`;
 }
 
-// ==================== 加強版壓縮 ====================
+function priceBadgesHTML(item) {
+  const basicDefs = [
+    { label: '售', key: 'retail', cls: 'c3' },
+    { label: '惠', key: 'promo', cls: 'c4' }
+  ];
+  const adminDefs = [
+    { label: '進', key: 'cost', cls: 'c1' },
+    { label: '批', key: 'wholesale', cls: 'c2' },
+    { label: '售', key: 'retail', cls: 'c3' },
+    { label: '惠', key: 'promo', cls: 'c4' },
+  ];
+  const defs = isAdmin() ? adminDefs : basicDefs;
+  return defs.filter(d => item[d.key]).map(d =>
+    `<span class="pbadge">
+       <span class="pbl">${d.label}</span>
+       <span class="pbv ${d.cls}">$${Number(item[d.key]).toLocaleString()}</span>
+     </span>`
+  ).join('') || '<span style="color:var(--muted);font-size:12px;">未設定</span>';
+}
+
+// ==================== 操作按鈕 ====================
+function actionHTML(item) {
+  return `<div class="actions">
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
+    <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
+  </div>`;
+}
+
+function cardActionHTML(item) {
+  return `<div class="item-card-actions">
+    <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
+    <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
+  </div>`;
+}
+
+// ==================== 壓縮 ====================
 async function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -744,7 +798,7 @@ async function compressImage(file) {
   });
 }
 
-// ==================== 主要功能 ====================
+// ==================== 核心功能 ====================
 async function loadItems(showLoadingUI = true) {
   if (!AUTH_TOKEN) return;
   if (showLoadingUI) setLoading(true);
@@ -771,7 +825,7 @@ function renderAll(items) {
   updateStats(items);
 }
 
-function renderTable(items) { /* 你的原本 renderTable 內容 */ 
+function renderTable(items) {
   const tbody = document.getElementById('item-tbody');
   if (!items.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">📭</div><p>目前沒有品項</p></div></td></tr>`;
@@ -788,7 +842,7 @@ function renderTable(items) { /* 你的原本 renderTable 內容 */
     </tr>`).join('');
 }
 
-function renderCards(items) { /* 你的原本 renderCards 內容 */ 
+function renderCards(items) {
   const list = document.getElementById('card-list');
   if (!items.length) {
     list.innerHTML = `<div class="empty-state"><div class="big">📭</div><p>目前沒有品項</p></div>`;
@@ -822,9 +876,206 @@ function filterItems() {
   renderAll(q ? allItems.filter(i => i.name.toLowerCase().includes(q)) : allItems);
 }
 
-// 其他必要函式（如 openModal, submitItem, handleImageSelect 等）請繼續補上...
+// ==================== Modal 與表單 ====================
+function openModal() {
+  editingId = null;
+  selectedImages = [];
+  document.getElementById('modal-title').textContent = '新增品項';
+  document.getElementById('modal-submit-btn').textContent = '新增品項';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('progress-msg').textContent = '';
+  resetForm();
+  applyRoleUI();
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('f-name').focus();
+}
 
-// 簡單的 esc 與 showToast
+function openEdit(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = '編輯品項';
+  document.getElementById('modal-submit-btn').textContent = '儲存變更';
+  document.getElementById('edit-id').value = id;
+  document.getElementById('f-name').value = item.name;
+  document.getElementById('f-qty').value = item.qty;
+  document.getElementById('f-retail').value = item.retail || '';
+  document.getElementById('f-note').value = item.note || '';
+  document.getElementById('f-promo').value = item.promo || '';
+  if (isAdmin()) {
+    document.getElementById('f-cost').value = item.cost || '';
+    document.getElementById('f-wholesale').value = item.wholesale || '';
+  }
+  selectedImages = getItemImages(item).slice(0, MAX_IMAGES);
+  renderImagePreview();
+  applyRoleUI();
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
+  resetForm();
+}
+
+function resetForm() {
+  ['f-name','f-qty','f-cost','f-wholesale','f-retail','f-promo','f-note'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  selectedImages = [];
+  renderImagePreview();
+}
+
+async function handleImageSelect(e) {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const room = MAX_IMAGES - selectedImages.length;
+  if (room <= 0) {
+    showToast(`最多只能放 ${MAX_IMAGES} 張圖片`, 'error');
+    resetImageInputs();
+    return;
+  }
+  try {
+    for (let i = 0; i < files.length && i < room; i++) {
+      setProgress(`🗜️ 壓縮第 ${i+1} 張...`);
+      const base64 = await compressImage(files[i]);
+      selectedImages.push(base64);
+    }
+    renderImagePreview();
+    setProgress('');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    resetImageInputs();
+  }
+}
+
+function renderImagePreview() {
+  const preview = document.getElementById('img-preview');
+  const hint = document.getElementById('img-size-hint');
+  if (!selectedImages.length) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    hint.textContent = '';
+    return;
+  }
+  preview.style.display = 'flex';
+  preview.innerHTML = selectedImages.map((base64, index) => `
+    <div class="preview-card">
+      <img src="${imageSrc(esc(base64))}" />
+      <button type="button" class="remove-img" onclick="removeImage(${index})">✕</button>
+    </div>`).join('');
+  const totalKB = Math.round(selectedImages.reduce((sum, b) => sum + b.length * 3 / 4, 0) / 1024);
+  hint.textContent = `${selectedImages.length} / ${MAX_IMAGES} 張，約 ${totalKB} KB`;
+}
+
+function removeImage(index) {
+  selectedImages.splice(index, 1);
+  renderImagePreview();
+}
+
+function resetImageInputs() {
+  document.getElementById('file-input').value = '';
+  document.getElementById('camera-input').value = '';
+}
+
+function setProgress(msg) {
+  document.getElementById('progress-msg').textContent = msg;
+}
+
+// ==================== 送出 ====================
+async function submitItem() {
+  if (!GAS_URL || !AUTH_TOKEN) return showToast('請先登入', 'error');
+  const isEdit = !!editingId;
+  const name = document.getElementById('f-name').value.trim();
+  const qty = document.getElementById('f-qty').value.trim();
+  const cost = document.getElementById('f-cost').value.trim();
+  const wholesale = document.getElementById('f-wholesale').value.trim();
+  const retail = document.getElementById('f-retail').value.trim();
+  const promo = document.getElementById('f-promo').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+
+  if (!name) return showToast('請輸入品項名稱', 'error');
+  if (qty === '') return showToast('請輸入數量', 'error');
+
+  const btn = document.getElementById('modal-submit-btn');
+  btn.disabled = true;
+  setProgress('💾 儲存中…');
+  btn.textContent = isEdit ? '儲存中…' : '新增中…';
+
+  try {
+    const finalImages = selectedImages.slice();
+    const params = new URLSearchParams({
+      token: AUTH_TOKEN,
+      action: isEdit ? 'edit' : 'add',
+      name, qty: Number(qty),
+      cost: isAdmin() ? Number(cost)||0 : 0,
+      wholesale: isAdmin() ? Number(wholesale)||0 : 0,
+      retail: Number(retail)||0,
+      promo: Number(promo)||0,
+      note,
+      images: JSON.stringify(finalImages),
+      image: finalImages[0] || ''
+    });
+    if (isEdit) params.set('id', editingId);
+
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    }, 30000);
+
+    const data = await parseJsonResponse(res);
+    if (!data.success) throw new Error(data.error || '儲存失敗');
+
+    const savedId = isEdit ? editingId : (data.id || '');
+    const updatedItem = { id: savedId, name, qty: Number(qty), retail: Number(retail)||0, promo: Number(promo)||0, note, images: finalImages, imageData: finalImages[0] || '' };
+    if (isAdmin()) {
+      updatedItem.cost = Number(cost)||0;
+      updatedItem.wholesale = Number(wholesale)||0;
+    }
+
+    if (isEdit) {
+      allItems = allItems.map(item => item.id === savedId ? updatedItem : item);
+    } else {
+      allItems = [updatedItem, ...allItems];
+    }
+
+    renderAll(allItems);
+    showToast(isEdit ? '已儲存變更！' : '新增成功！', 'success');
+    closeModal();
+    await loadItems(false);
+  } catch (e) {
+    showToast('操作失敗：' + getFetchErrorMessage(e), 'error');
+  } finally {
+    btn.textContent = isEdit ? '儲存變更' : '新增品項';
+    btn.disabled = false;
+    setProgress('');
+  }
+}
+
+async function deleteItem(id, name) {
+  if (!confirm(`確定要刪除「${name}」嗎？`)) return;
+  try {
+    const params = new URLSearchParams({ token: AUTH_TOKEN, action: 'delete', id });
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    const data = await parseJsonResponse(res);
+    if (data.success) {
+      showToast(`已刪除「${name}」`, 'success');
+      loadItems();
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (e) {
+    showToast('刪除失敗：' + getFetchErrorMessage(e), 'error');
+  }
+}
+
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

@@ -773,27 +773,49 @@ async function compressImage(file) {
     reader.onload = ev => {
       const img = new Image();
       img.onload = () => {
-        const dimensions = [420, 360, 300, 240, 180, 140, 100];
+        const dimensions = [420, 360, 300, 240, 180, 140, 100, 80];
+        let bestBase64 = null;
+        let bestLen = Infinity;
+
         for (let maxDim of dimensions) {
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
           const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
+          canvas.width = w;
+          canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
           for (let q = 0.92; q >= 0.04; q -= 0.06) {
             const dataUrl = canvas.toDataURL('image/jpeg', q);
             const base64 = dataUrl.split(',')[1];
+            if (base64.length < bestLen) {
+              bestLen = base64.length;
+              bestBase64 = base64;
+            }
+            // 已壓到目標內，直接用
             if (base64.length <= BASE64_LIMIT) {
-              resolve(base64);
+              resolve({ base64, overLimit: false, sizeKB: Math.round(base64.length * 3 / 4 / 1024) });
               return;
             }
           }
         }
-        reject(new Error(`圖片無法壓縮至 20KB 以下`));
+
+        // 壓不到 20KB：仍回傳最小結果，標記 overLimit
+        if (bestBase64) {
+          resolve({
+            base64: bestBase64,
+            overLimit: true,
+            sizeKB: Math.round(bestLen * 3 / 4 / 1024)
+          });
+          return;
+        }
+        reject(new Error('無法讀取圖片'));
       };
+      img.onerror = () => reject(new Error('圖片讀取失敗'));
       img.src = ev.target.result;
     };
+    reader.onerror = () => reject(new Error('檔案讀取失敗'));
     reader.readAsDataURL(file);
   });
 }
@@ -938,9 +960,14 @@ async function handleImageSelect(e) {
   }
   try {
     for (let i = 0; i < files.length && i < room; i++) {
-      setProgress(`🗜️ 壓縮第 ${i+1} 張...`);
-      const base64 = await compressImage(files[i]);
-      selectedImages.push(base64);
+      setProgress(`🗜️ 壓縮第 ${i + 1} 張...`);
+      const result = await compressImage(files[i]);
+      selectedImages.push(result.base64);
+
+      if (result.overLimit) {
+        // 不阻擋，只提示實際大小
+        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 20KB，仍已加入）`, 'error');
+      }
     }
     renderImagePreview();
     setProgress('');

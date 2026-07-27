@@ -1061,7 +1061,7 @@ async function submitItem() {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
-    }, 30000);
+    }, 12000);   // ★ 依使用者要求縮短為 12 秒，編輯大圖片時較容易跳出「連線失敗」提示
 
     const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '儲存失敗');

@@ -552,6 +552,7 @@ let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
 let selectedImages = [];
+let originalImages = [];   // ★ 記錄編輯開始時的原始圖片，用於判斷是否有變動
 let editingId = null;
 let lightboxImages = [];
 let lightboxIndex = 0;
@@ -651,7 +652,7 @@ async function doLogin() {
 function doLogout() {
   AUTH_TOKEN = ''; USER_ROLE = '';
   sessionStorage.clear();
-  allItems = []; selectedImages = []; editingId = null;
+  allItems = []; selectedImages = []; originalImages = []; editingId = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('pwd-input').value = '';
@@ -902,6 +903,7 @@ function filterItems() {
 function openModal() {
   editingId = null;
   selectedImages = [];
+  originalImages = [];   // ★ 新增品項時清空，避免殘留上次編輯資料
   document.getElementById('modal-title').textContent = '新增品項';
   document.getElementById('modal-submit-btn').textContent = '新增品項';
   document.getElementById('edit-id').value = '';
@@ -929,6 +931,7 @@ function openEdit(id) {
     document.getElementById('f-wholesale').value = item.wholesale || '';
   }
   selectedImages = getItemImages(item).slice(0, MAX_IMAGES);
+  originalImages = selectedImages.slice();   // ★ 記錄編輯開始時的原始圖片，用來比對是否有變動
   renderImagePreview();
   applyRoleUI();
   document.getElementById('modal').classList.add('open');
@@ -946,6 +949,7 @@ function resetForm() {
     document.getElementById(id).value = '';
   });
   selectedImages = [];
+  originalImages = [];
   renderImagePreview();
 }
 
@@ -1033,6 +1037,12 @@ async function submitItem() {
 
   try {
     const finalImages = selectedImages.slice();
+
+    // ★ 編輯時，若圖片內容跟一開始載入時完全相同，代表使用者沒有更動圖片，
+    //   就送 '__keep__' 讓後端沿用舊圖片、跳過重新驗證與寫入，避免誤觸大小限制。
+    const imagesUnchanged = isEdit &&
+      JSON.stringify(finalImages) === JSON.stringify(originalImages);
+
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
       action: isEdit ? 'edit' : 'add',
@@ -1042,8 +1052,8 @@ async function submitItem() {
       retail: Number(retail)||0,
       promo: Number(promo)||0,
       note,
-      images: JSON.stringify(finalImages),
-      image: finalImages[0] || ''
+      images: imagesUnchanged ? '__keep__' : JSON.stringify(finalImages),
+      image: imagesUnchanged ? '__keep__' : (finalImages[0] || '')
     });
     if (isEdit) params.set('id', editingId);
 

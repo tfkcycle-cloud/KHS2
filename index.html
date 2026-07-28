@@ -252,13 +252,19 @@
     }
     .note-text { color: var(--muted); font-size: 13px; }
 
-    .actions { display: flex; gap: 6px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn-edit {
       background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3);
       border-radius: 7px; color: var(--accent); padding: 5px 10px;
       font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap;
     }
     .btn-edit:hover { background: rgba(79,142,247,.25); }
+    .btn-photo {
+      background: rgba(124,92,252,.12); border: 1px solid rgba(124,92,252,.3);
+      border-radius: 7px; color: var(--accent2); padding: 5px 10px;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap;
+    }
+    .btn-photo:hover { background: rgba(124,92,252,.25); }
     .btn-delete {
       background: rgba(247,86,106,.1); border: 1px solid rgba(247,86,106,.25);
       border-radius: 7px; color: var(--danger); padding: 5px 10px;
@@ -286,9 +292,10 @@
     .item-card-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .item-card-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .item-card-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
-    .item-card-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .item-card-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .item-card-actions .btn-edit,
-    .item-card-actions .btn-delete { flex: 1; text-align: center; padding: 8px; }
+    .item-card-actions .btn-photo,
+    .item-card-actions .btn-delete { flex: 1; text-align: center; padding: 8px; min-width: 70px; }
 
     .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
     .empty-state .big { font-size: 36px; margin-bottom: 10px; }
@@ -344,7 +351,8 @@
     .price-fields .field:nth-child(3) label::before { background: var(--price3); }
     .price-fields .field:nth-child(4) label::before { background: var(--price4); }
 
-    .basic-hide {
+    .basic-hide,
+    .edit-hide {
       display: none !important;
     }
 
@@ -501,12 +509,13 @@
   <div class="lightbox-counter" id="lightbox-counter"></div>
 </div>
 
+<!-- 一般資料編輯 / 新增 Modal（不含照片，除非是新增品項才顯示照片區） -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h3 id="modal-title">新增品項</h3>
     <input type="hidden" id="edit-id" />
 
-    <div class="field">
+    <div class="field" id="add-image-field">
       <label>圖片（選填，最多 5 張）</label>
       <div class="img-preview" id="img-preview"></div>
       <div class="img-upload-area" id="upload-area">
@@ -544,10 +553,41 @@
   </div>
 </div>
 
+<!-- 照片編輯 Modal（獨立於一般資料，只處理既有品項的照片） -->
+<div class="modal-overlay" id="img-modal">
+  <div class="modal">
+    <h3>編輯照片<span id="img-modal-name" style="color:var(--muted);font-weight:400;"></span></h3>
+    <input type="hidden" id="img-modal-id" />
+
+    <div class="field" style="margin-bottom:0;">
+      <label>圖片（選填，最多 5 張）</label>
+      <div class="img-preview" id="img-modal-preview"></div>
+      <div class="img-upload-area" id="img-modal-upload-area">
+        <input type="file" id="img-modal-file-input" accept="image/*" multiple onchange="handleImageModalSelect(event)" />
+        <input type="file" id="img-modal-camera-input" accept="image/*" capture="environment" onchange="handleImageModalSelect(event)" />
+        <div class="upload-icon">🖼️</div>
+        <p>選擇圖片來源</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 20KB 以內）</p>
+        <div class="img-choice-row">
+          <button type="button" class="btn-img-choice" onclick="document.getElementById('img-modal-file-input').click()">相簿選擇</button>
+          <button type="button" class="btn-img-choice" onclick="document.getElementById('img-modal-camera-input').click()">現場拍照</button>
+        </div>
+      </div>
+      <div class="img-size-hint" id="img-modal-size-hint"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeImageModal()">取消</button>
+      <button class="btn-submit" id="img-modal-submit-btn" onclick="submitImagesOnly()">儲存照片</button>
+    </div>
+    <div class="progress-msg" id="img-modal-progress"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyHFhHN0Vai2FMKD_PWMVurGFxi9T1XWIRqPc_AaOmI1GK5b9QyYuc4QV277nsoL8K-pA/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwVaLaNi3MVrk-DOpaskmnHpqDwURC-QoHG14SgLMP5UHNkfYEUEYVmpJz4TR7mizg4ig/exec';
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
@@ -556,6 +596,10 @@ let editingId = null;
 let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchX = 0;
+
+// 照片編輯 Modal 專用的獨立狀態（跟一般資料編輯完全分開）
+let imgModalId = null;
+let imgModalImages = [];
 
 const MAX_IMAGES = 5;
 const MAX_BYTES = 20 * 1024;
@@ -652,6 +696,7 @@ function doLogout() {
   AUTH_TOKEN = ''; USER_ROLE = '';
   sessionStorage.clear();
   allItems = []; selectedImages = []; editingId = null;
+  imgModalId = null; imgModalImages = [];
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('pwd-input').value = '';
@@ -668,7 +713,7 @@ function promptGasUrl() {
   }
 }
 
-// ==================== 圖片處理 ====================
+// ==================== 圖片處理（共用工具） ====================
 function imageSrc(base64) {
   return 'data:image/jpeg;base64,' + base64;
 }
@@ -755,6 +800,7 @@ function priceBadgesHTML(item) {
 function actionHTML(item) {
   return `<div class="actions">
     <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">編輯</button>
+    <button class="btn-photo" onclick="openImageModal('${esc(item.id)}')">📷 圖片</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">刪除</button>
   </div>`;
 }
@@ -762,6 +808,7 @@ function actionHTML(item) {
 function cardActionHTML(item) {
   return `<div class="item-card-actions">
     <button class="btn-edit" onclick="openEdit('${esc(item.id)}')">✏️ 編輯</button>
+    <button class="btn-photo" onclick="openImageModal('${esc(item.id)}')">📷 圖片</button>
     <button class="btn-delete" onclick="deleteItem('${esc(item.id)}','${esc(item.name)}')">🗑️ 刪除</button>
   </div>`;
 }
@@ -898,7 +945,7 @@ function filterItems() {
   renderAll(q ? allItems.filter(i => i.name.toLowerCase().includes(q)) : allItems);
 }
 
-// ==================== Modal 與表單 ====================
+// ==================== 一般資料 Modal（新增／編輯文字資料，不含照片） ====================
 function openModal() {
   editingId = null;
   selectedImages = [];
@@ -907,6 +954,8 @@ function openModal() {
   document.getElementById('edit-id').value = '';
   document.getElementById('progress-msg').textContent = '';
   resetForm();
+  // 新增品項時才顯示照片上傳區
+  document.getElementById('add-image-field').classList.remove('edit-hide');
   applyRoleUI();
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
@@ -928,8 +977,9 @@ function openEdit(id) {
     document.getElementById('f-cost').value = item.cost || '';
     document.getElementById('f-wholesale').value = item.wholesale || '';
   }
-  selectedImages = getItemImages(item).slice(0, MAX_IMAGES);
-  renderImagePreview();
+  // 編輯既有品項時：資料跟照片分開，這裡不顯示照片區，照片請用「圖片」按鈕
+  selectedImages = [];
+  document.getElementById('add-image-field').classList.add('edit-hide');
   applyRoleUI();
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
@@ -1011,7 +1061,132 @@ function setProgress(msg) {
   document.getElementById('progress-msg').textContent = msg;
 }
 
-// ==================== 送出 ====================
+// ==================== 照片編輯 Modal（獨立，只處理既有品項的圖片） ====================
+function openImageModal(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  imgModalId = id;
+  imgModalImages = getItemImages(item).slice(0, MAX_IMAGES);
+  document.getElementById('img-modal-id').value = id;
+  document.getElementById('img-modal-name').textContent = '　—　' + item.name;
+  document.getElementById('img-modal-progress').textContent = '';
+  renderImageModalPreview();
+  document.getElementById('img-modal').classList.add('open');
+}
+
+function closeImageModal() {
+  document.getElementById('img-modal').classList.remove('open');
+  imgModalId = null;
+  imgModalImages = [];
+  resetImageModalInputs();
+}
+
+async function handleImageModalSelect(e) {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const room = MAX_IMAGES - imgModalImages.length;
+  if (room <= 0) {
+    showToast(`最多只能放 ${MAX_IMAGES} 張圖片`, 'error');
+    resetImageModalInputs();
+    return;
+  }
+  try {
+    for (let i = 0; i < files.length && i < room; i++) {
+      setImageModalProgress(`🗜️ 壓縮第 ${i + 1} 張...`);
+      const result = await compressImage(files[i]);
+      imgModalImages.push(result.base64);
+
+      if (result.overLimit) {
+        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 20KB，仍已加入）`, 'error');
+      }
+    }
+    renderImageModalPreview();
+    setImageModalProgress('');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    resetImageModalInputs();
+  }
+}
+
+function renderImageModalPreview() {
+  const preview = document.getElementById('img-modal-preview');
+  const hint = document.getElementById('img-modal-size-hint');
+  if (!imgModalImages.length) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    hint.textContent = '';
+    return;
+  }
+  preview.style.display = 'flex';
+  preview.innerHTML = imgModalImages.map((base64, index) => `
+    <div class="preview-card">
+      <img src="${imageSrc(esc(base64))}" />
+      <button type="button" class="remove-img" onclick="removeImageModalItem(${index})">✕</button>
+    </div>`).join('');
+  const totalKB = Math.round(imgModalImages.reduce((sum, b) => sum + b.length * 3 / 4, 0) / 1024);
+  hint.textContent = `${imgModalImages.length} / ${MAX_IMAGES} 張，約 ${totalKB} KB`;
+}
+
+function removeImageModalItem(index) {
+  imgModalImages.splice(index, 1);
+  renderImageModalPreview();
+}
+
+function resetImageModalInputs() {
+  document.getElementById('img-modal-file-input').value = '';
+  document.getElementById('img-modal-camera-input').value = '';
+}
+
+function setImageModalProgress(msg) {
+  document.getElementById('img-modal-progress').textContent = msg;
+}
+
+async function submitImagesOnly() {
+  if (!GAS_URL || !AUTH_TOKEN) return showToast('請先登入', 'error');
+  if (!imgModalId) return;
+
+  const btn = document.getElementById('img-modal-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '儲存中…';
+  setImageModalProgress('💾 儲存照片中…');
+
+  try {
+    const finalImages = imgModalImages.slice();
+    const params = new URLSearchParams({
+      token: AUTH_TOKEN,
+      action: 'editImages',
+      id: imgModalId,
+      images: JSON.stringify(finalImages)
+    });
+
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    }, 30000);
+
+    const data = await parseJsonResponse(res);
+    if (!data.success) throw new Error(data.error || '儲存失敗');
+
+    // 只更新本地資料中的圖片欄位，其他資料不動
+    allItems = allItems.map(item => item.id === imgModalId
+      ? { ...item, images: finalImages, imageData: finalImages[0] || '' }
+      : item);
+
+    renderAll(allItems);
+    showToast('照片已更新！', 'success');
+    closeImageModal();
+  } catch (e) {
+    showToast('照片儲存失敗：' + getFetchErrorMessage(e), 'error');
+  } finally {
+    btn.textContent = '儲存照片';
+    btn.disabled = false;
+    setImageModalProgress('');
+  }
+}
+
+// ==================== 送出（一般資料，不含照片） ====================
 async function submitItem() {
   if (!GAS_URL || !AUTH_TOKEN) return showToast('請先登入', 'error');
   const isEdit = !!editingId;
@@ -1032,7 +1207,8 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    const finalImages = selectedImages.slice();
+    // 編輯既有品項時完全不傳圖片參數，後端會保留原本的照片；
+    // 新增品項時才會一併帶上使用者剛選好的照片。
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
       action: isEdit ? 'edit' : 'add',
@@ -1041,11 +1217,17 @@ async function submitItem() {
       wholesale: isAdmin() ? Number(wholesale)||0 : 0,
       retail: Number(retail)||0,
       promo: Number(promo)||0,
-      note,
-      images: JSON.stringify(finalImages),
-      image: finalImages[0] || ''
+      note
     });
-    if (isEdit) params.set('id', editingId);
+
+    if (isEdit) {
+      params.set('id', editingId);
+      params.set('images', '__keep__');
+    } else {
+      const finalImages = selectedImages.slice();
+      params.set('images', JSON.stringify(finalImages));
+      params.set('image', finalImages[0] || '');
+    }
 
     const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
@@ -1057,7 +1239,14 @@ async function submitItem() {
     if (!data.success) throw new Error(data.error || '儲存失敗');
 
     const savedId = isEdit ? editingId : (data.id || '');
-    const updatedItem = { id: savedId, name, qty: Number(qty), retail: Number(retail)||0, promo: Number(promo)||0, note, images: finalImages, imageData: finalImages[0] || '' };
+    const existing = isEdit ? allItems.find(i => i.id === savedId) : null;
+    const keptImages = existing ? getItemImages(existing) : selectedImages.slice();
+
+    const updatedItem = {
+      id: savedId, name, qty: Number(qty),
+      retail: Number(retail)||0, promo: Number(promo)||0, note,
+      images: keptImages, imageData: keptImages[0] || ''
+    };
     if (isAdmin()) {
       updatedItem.cost = Number(cost)||0;
       updatedItem.wholesale = Number(wholesale)||0;

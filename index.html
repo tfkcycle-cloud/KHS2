@@ -587,7 +587,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwVaLaNi3MVrk-DOpaskmnHpqDwURC-QoHG14SgLMP5UHNkfYEUEYVmpJz4TR7mizg4ig/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxK-sPNhCBw0Ys4r_alVrb_DLQY7FhrPLao2Vlb-3fNF5ygFylli2s8TFYIwOXNITmXaw/exec';
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
@@ -1146,6 +1146,11 @@ async function submitImagesOnly() {
   if (!GAS_URL || !AUTH_TOKEN) return showToast('請先登入', 'error');
   if (!imgModalId) return;
 
+  // 沿用既有的 'edit' 動作，把品項原本的文字/價格資料一起帶著送出，
+  // 只有照片是新的 —— 這樣後端完全不用改，也不用重新部署。
+  const item = allItems.find(i => i.id === imgModalId);
+  if (!item) return;
+
   const btn = document.getElementById('img-modal-submit-btn');
   btn.disabled = true;
   btn.textContent = '儲存中…';
@@ -1155,9 +1160,17 @@ async function submitImagesOnly() {
     const finalImages = imgModalImages.slice();
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
-      action: 'editImages',
+      action: 'edit',
       id: imgModalId,
-      images: JSON.stringify(finalImages)
+      name: item.name || '',
+      qty: Number(item.qty) || 0,
+      cost: isAdmin() ? (Number(item.cost) || 0) : 0,
+      wholesale: isAdmin() ? (Number(item.wholesale) || 0) : 0,
+      retail: Number(item.retail) || 0,
+      promo: Number(item.promo) || 0,
+      note: item.note || '',
+      images: JSON.stringify(finalImages),
+      image: finalImages[0] || ''
     });
 
     const res = await fetchWithTimeout(GAS_URL, {
@@ -1170,9 +1183,9 @@ async function submitImagesOnly() {
     if (!data.success) throw new Error(data.error || '儲存失敗');
 
     // 只更新本地資料中的圖片欄位，其他資料不動
-    allItems = allItems.map(item => item.id === imgModalId
-      ? { ...item, images: finalImages, imageData: finalImages[0] || '' }
-      : item);
+    allItems = allItems.map(i => i.id === imgModalId
+      ? { ...i, images: finalImages, imageData: finalImages[0] || '' }
+      : i);
 
     renderAll(allItems);
     showToast('照片已更新！', 'success');
@@ -1207,7 +1220,7 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    // 編輯既有品項時完全不傳圖片參數，後端會保留原本的照片；
+    // 編輯既有品項時，照片一律用「品項目前本來的照片」原樣送回去（不會被清空）；
     // 新增品項時才會一併帶上使用者剛選好的照片。
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
@@ -1221,8 +1234,11 @@ async function submitItem() {
     });
 
     if (isEdit) {
+      const existing = allItems.find(i => i.id === editingId);
+      const keepImages = existing ? getItemImages(existing) : [];
       params.set('id', editingId);
-      params.set('images', '__keep__');
+      params.set('images', JSON.stringify(keepImages));
+      params.set('image', keepImages[0] || '');
     } else {
       const finalImages = selectedImages.slice();
       params.set('images', JSON.stringify(finalImages));

@@ -587,7 +587,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxxd7VcKnMPCStUc-TLCo_ujZNvlQtcW7eLvQ-q2WLHZ9ZWPiEP1H1tCPAVrzwfsplDtA/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwGLDXN4z8Wpfp2uSd7iwHeNSS_4V-itzIix7uI7zoMbnOAGyps8oyTghfW8jqTJtSDIQ/exec';
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
@@ -1203,11 +1203,12 @@ async function submitImagesOnly() {
       image: finalImages[0] || ''
     });
 
-    const res = await fetchWithTimeout(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    }, 30000);
+    const url = `${GAS_URL}?${params.toString()}`;
+    if (url.length > 7000) {
+      throw new Error(`照片資料太大（網址約 ${Math.round(url.length/1000)}KB），GET 方式放不下，請減少張數或改用較小的照片`);
+    }
+
+    const res = await fetchWithTimeout(url, {}, 30000);
 
     const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '儲存失敗');
@@ -1263,20 +1264,23 @@ async function submitItem() {
       note
     });
 
+    let res;
     if (isEdit) {
       params.set('id', editingId);
       params.set('images', '__keep__');
+      // 編輯資料改用 GET：這裡的 images 固定是 '__keep__'（很短），適合放進網址。
+      res = await fetchWithTimeout(`${GAS_URL}?${params.toString()}`, {}, 30000);
     } else {
       const finalImages = selectedImages.slice();
       params.set('images', JSON.stringify(finalImages));
       params.set('image', finalImages[0] || '');
+      // 新增品項可能帶照片，資料量較大，維持用 POST 送出。
+      res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+      }, 30000);
     }
-
-    const res = await fetchWithTimeout(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    }, 30000);
 
     const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '儲存失敗');

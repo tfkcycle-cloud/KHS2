@@ -547,7 +547,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbz5Jf0djqb93iUwlSsiuCpgc1-zCnFbBizMF77UCRPkY4A19oDNBqYGqsD4d2Jxk_srTQ/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbx-lx1BVJMMAZTwGhNlJ2Qr74pRE9ZJekdFsWn6YumE0NDg-E6BRQ6Nm59tFGNuFitBZw/exec';
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
@@ -670,8 +670,14 @@ function promptGasUrl() {
 }
 
 // ==================== 圖片處理 ====================
-function imageSrc(base64) {
-  return 'data:image/jpeg;base64,' + base64;
+function imageSrc(src) {
+  if (!src) return '';
+  // 已經是網址（Drive 或任何 http）直接用
+  if (/^https?:\/\//i.test(src) || src.startsWith('data:')) {
+    return src;
+  }
+  // 舊資料還是純 base64 的相容處理
+  return 'data:image/jpeg;base64,' + src;
 }
 
 function getItemImages(item) {

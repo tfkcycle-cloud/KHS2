@@ -523,7 +523,7 @@
         <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>選擇圖片來源</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 20KB 以內）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 30KB 以內）</p>
         <div class="img-choice-row">
           <button type="button" class="btn-img-choice" onclick="document.getElementById('file-input').click()">相簿選擇</button>
           <button type="button" class="btn-img-choice" onclick="document.getElementById('camera-input').click()">現場拍照</button>
@@ -567,7 +567,7 @@
         <input type="file" id="img-modal-camera-input" accept="image/*" capture="environment" onchange="handleImageModalSelect(event)" />
         <div class="upload-icon">🖼️</div>
         <p>選擇圖片來源</p>
-        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 20KB 以內）</p>
+        <p style="margin-top:3px;font-size:11px;">JPG、PNG、GIF（每張自動壓縮至 30KB 以內）</p>
         <div class="img-choice-row">
           <button type="button" class="btn-img-choice" onclick="document.getElementById('img-modal-file-input').click()">相簿選擇</button>
           <button type="button" class="btn-img-choice" onclick="document.getElementById('img-modal-camera-input').click()">現場拍照</button>
@@ -587,7 +587,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxK-sPNhCBw0Ys4r_alVrb_DLQY7FhrPLao2Vlb-3fNF5ygFylli2s8TFYIwOXNITmXaw/exec';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxxd7VcKnMPCStUc-TLCo_ujZNvlQtcW7eLvQ-q2WLHZ9ZWPiEP1H1tCPAVrzwfsplDtA/exec';
 let AUTH_TOKEN = sessionStorage.getItem('auth_token') || '';
 let USER_ROLE = sessionStorage.getItem('user_role') || '';
 let allItems = [];
@@ -602,7 +602,7 @@ let imgModalId = null;
 let imgModalImages = [];
 
 const MAX_IMAGES = 5;
-const MAX_BYTES = 20 * 1024;
+const MAX_BYTES = 30 * 1024; // 壓縮目標：30KB
 const BASE64_LIMIT = Math.ceil(MAX_BYTES * 4 / 3);
 
 document.getElementById('pwd-input').addEventListener('keydown', e => {
@@ -745,6 +745,36 @@ function openItemLightbox(id, index = 0) {
   openLightbox(getItemImages(item), index);
 }
 
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open', 'has-many');
+  document.body.style.overflow = '';
+  lightboxImages = [];
+  lightboxIndex = 0;
+}
+
+function moveLightbox(direction) {
+  if (!lightboxImages.length) return;
+  lightboxIndex = (lightboxIndex + direction + lightboxImages.length) % lightboxImages.length;
+  renderLightboxImage();
+}
+
+document.addEventListener('keydown', e => {
+  const box = document.getElementById('lightbox');
+  if (!box.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') moveLightbox(-1);
+  if (e.key === 'ArrowRight') moveLightbox(1);
+});
+
+document.getElementById('lightbox').addEventListener('touchstart', e => {
+  lightboxTouchX = e.touches[0].clientX;
+}, { passive: true });
+
+document.getElementById('lightbox').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - lightboxTouchX;
+  if (Math.abs(dx) > 40) moveLightbox(dx > 0 ? -1 : 1);
+});
+
 function thumbHTML(item) {
   const images = getItemImages(item);
   if (!images.length) return `<div class="img-placeholder">📦</div>`;
@@ -848,7 +878,7 @@ async function compressImage(file) {
           }
         }
 
-        // 壓不到 20KB：仍回傳最小結果，標記 overLimit
+        // 壓不到 30KB：仍回傳最小結果，標記 overLimit
         if (bestBase64) {
           resolve({
             base64: bestBase64,
@@ -1016,7 +1046,7 @@ async function handleImageSelect(e) {
 
       if (result.overLimit) {
         // 不阻擋，只提示實際大小
-        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 20KB，仍已加入）`, 'error');
+        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 30KB，仍已加入）`, 'error');
       }
     }
     renderImagePreview();
@@ -1097,7 +1127,7 @@ async function handleImageModalSelect(e) {
       imgModalImages.push(result.base64);
 
       if (result.overLimit) {
-        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 20KB，仍已加入）`, 'error');
+        showToast(`第 ${i + 1} 張約 ${result.sizeKB} KB（超過 30KB，仍已加入）`, 'error');
       }
     }
     renderImageModalPreview();
@@ -1220,7 +1250,7 @@ async function submitItem() {
   btn.textContent = isEdit ? '儲存中…' : '新增中…';
 
   try {
-    // 編輯既有品項時，照片一律用「品項目前本來的照片」原樣送回去（不會被清空）；
+    // 編輯既有品項時完全不傳照片資料，後端會保留原本的照片，不會重新檢查大小；
     // 新增品項時才會一併帶上使用者剛選好的照片。
     const params = new URLSearchParams({
       token: AUTH_TOKEN,
@@ -1234,11 +1264,8 @@ async function submitItem() {
     });
 
     if (isEdit) {
-      const existing = allItems.find(i => i.id === editingId);
-      const keepImages = existing ? getItemImages(existing) : [];
       params.set('id', editingId);
-      params.set('images', JSON.stringify(keepImages));
-      params.set('image', keepImages[0] || '');
+      params.set('images', '__keep__');
     } else {
       const finalImages = selectedImages.slice();
       params.set('images', JSON.stringify(finalImages));

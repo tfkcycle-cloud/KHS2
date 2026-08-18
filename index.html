@@ -1,0 +1,873 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>條碼庫存測試</title>
+
+    <!-- html5-qrcode：手機瀏覽器條碼掃描 -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+            background: #ffffff;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                "Noto Sans TC",
+                sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            padding: 24px 20px;
+        }
+
+        /* 首頁 */
+        .home {
+            min-height: calc(100vh - 48px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scan-button {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 2px solid #111;
+            background: #fff;
+            color: #111;
+            font-size: 22px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .scan-button:active {
+            transform: scale(0.96);
+        }
+
+        /* 掃描頁 */
+        .scanner-page {
+            display: none;
+        }
+
+        .page-title {
+            margin: 10px 0 20px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        #reader {
+            width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .back-button {
+            margin-top: 20px;
+            width: 100%;
+            height: 48px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* 商品結果 */
+        .result {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .result-title {
+            margin: 0 0 18px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #777;
+        }
+
+        .info-value {
+            font-weight: 500;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        /* 新增商品 */
+        .add-box {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+        }
+
+        .add-title {
+            margin: 0 0 8px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .add-description {
+            margin: 0 0 18px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .input {
+            width: 100%;
+            height: 46px;
+            padding: 0 12px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .input:focus {
+            border-color: #111;
+        }
+
+        .add-button {
+            width: 100%;
+            height: 46px;
+            border: none;
+            border-radius: 7px;
+            background: #111;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .add-button:active {
+            opacity: 0.8;
+        }
+
+        /* 訊息 */
+        .message {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* 載入 */
+        .loading {
+            display: none;
+            margin-top: 16px;
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- =========================
+         首頁
+    ========================== -->
+    <section id="homePage" class="home">
+
+        <button
+            id="scanButton"
+            class="scan-button"
+            type="button"
+        >
+            掃描
+        </button>
+
+    </section>
+
+
+    <!-- =========================
+         掃描頁
+    ========================== -->
+    <section id="scannerPage" class="scanner-page">
+
+        <h1 class="page-title">掃描條碼</h1>
+
+        <div id="reader"></div>
+
+        <div id="loading" class="loading">
+            查詢商品中...
+        </div>
+
+        <div id="message" class="message"></div>
+
+
+        <!-- 已存在商品 -->
+        <div id="resultBox" class="result">
+
+            <h2 class="result-title">商品資訊</h2>
+
+            <div class="info-row">
+                <span class="info-label">商品名稱</span>
+                <span id="productName" class="info-value">-</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">條碼</span>
+                <span id="productBarcode" class="info-value">-</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">庫存</span>
+                <span id="productStock" class="info-value">-</span>
+            </div>
+
+        </div>
+
+
+        <!-- 不存在商品 -->
+        <div id="addBox" class="add-box">
+
+            <h2 class="add-title">找不到商品</h2>
+
+            <p class="add-description">
+                此條碼尚未建立，可以直接新增。
+            </p>
+
+            <input
+                id="newBarcode"
+                class="input"
+                type="text"
+                placeholder="條碼"
+                readonly
+            >
+
+            <input
+                id="newProductName"
+                class="input"
+                type="text"
+                placeholder="商品名稱"
+            >
+
+            <input
+                id="newStock"
+                class="input"
+                type="number"
+                inputmode="numeric"
+                placeholder="初始庫存"
+                value="0"
+            >
+
+            <button
+                id="addButton"
+                class="add-button"
+                type="button"
+            >
+                新增商品
+            </button>
+
+        </div>
+
+
+        <button
+            id="backButton"
+            class="back-button"
+            type="button"
+        >
+            返回
+        </button>
+
+    </section>
+
+</div>
+
+
+<script>
+    /*
+     * ==========================================
+     * Google Apps Script 網址
+     * ==========================================
+     *
+     * 完成 Apps Script 部署後，
+     * 把網址貼到這裡。
+     *
+     * 例如：
+     * const API_URL = "https://script.google.com/macros/s/XXXX/exec";
+     */
+
+    const API_URL = "請把你的 Apps Script 網址貼在這裡";
+
+
+    /*
+     * ==========================================
+     * DOM
+     * ==========================================
+     */
+
+    const homePage = document.getElementById("homePage");
+    const scannerPage = document.getElementById("scannerPage");
+
+    const scanButton = document.getElementById("scanButton");
+    const backButton = document.getElementById("backButton");
+
+    const resultBox = document.getElementById("resultBox");
+    const addBox = document.getElementById("addBox");
+
+    const productName = document.getElementById("productName");
+    const productBarcode = document.getElementById("productBarcode");
+    const productStock = document.getElementById("productStock");
+
+    const newBarcode = document.getElementById("newBarcode");
+    const newProductName = document.getElementById("newProductName");
+    const newStock = document.getElementById("newStock");
+
+    const addButton = document.getElementById("addButton");
+
+    const message = document.getElementById("message");
+    const loading = document.getElementById("loading");
+
+
+    /*
+     * ==========================================
+     * 掃描器
+     * ==========================================
+     */
+
+    let html5QrCode = null;
+    let scannerRunning = false;
+    let scanned = false;
+
+
+    /*
+     * ==========================================
+     * 開啟掃描
+     * ==========================================
+     */
+
+    scanButton.addEventListener("click", async () => {
+
+        homePage.style.display = "none";
+        scannerPage.style.display = "block";
+
+        resetResult();
+
+        await startScanner();
+
+    });
+
+
+    /*
+     * ==========================================
+     * 開始相機掃描
+     * ==========================================
+     */
+
+    async function startScanner() {
+
+        scanned = false;
+
+        try {
+
+            html5QrCode = new Html5Qrcode("reader");
+
+            const config = {
+                fps: 10,
+
+                qrbox: {
+                    width: 280,
+                    height: 160
+                },
+
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.CODE_93,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.CODABAR
+                ]
+            };
+
+
+            await html5QrCode.start(
+                {
+                    facingMode: "environment"
+                },
+
+                config,
+
+                onScanSuccess,
+
+                onScanFailure
+            );
+
+            scannerRunning = true;
+
+        } catch (error) {
+
+            console.error(error);
+
+            showMessage(
+                "無法開啟相機，請確認瀏覽器已允許相機權限。"
+            );
+        }
+    }
+
+
+    /*
+     * ==========================================
+     * 掃描成功
+     * ==========================================
+     */
+
+    async function onScanSuccess(decodedText) {
+
+        // 避免同一個條碼被相機連續掃很多次
+        if (scanned) {
+            return;
+        }
+
+        scanned = true;
+
+        console.log("掃描結果：", decodedText);
+
+        await stopScanner();
+
+        // 顯示查詢狀態
+        loading.style.display = "block";
+
+        hideMessage();
+
+        // 先暫時顯示條碼
+        newBarcode.value = decodedText;
+        productBarcode.textContent = decodedText;
+
+        await searchProduct(decodedText);
+    }
+
+
+    /*
+     * ==========================================
+     * 掃描失敗
+     * ==========================================
+     */
+
+    function onScanFailure(error) {
+        // 不需要一直顯示錯誤
+    }
+
+
+    /*
+     * ==========================================
+     * 查詢商品
+     * ==========================================
+     */
+
+    async function searchProduct(barcode) {
+
+        /*
+         * 如果還沒有設定 Apps Script，
+         * 先用測試模式。
+         */
+
+        if (
+            !API_URL ||
+            API_URL.includes("請把你的 Apps Script 網址")
+        ) {
+
+            loading.style.display = "none";
+
+            /*
+             * 測試用：
+             * 123456789 → A商品
+             * 987654321 → B商品
+             */
+
+            if (barcode === "123456789") {
+
+                showProduct({
+                    name: "A商品",
+                    barcode: barcode,
+                    stock: 10
+                });
+
+            } else if (barcode === "987654321") {
+
+                showProduct({
+                    name: "B商品",
+                    barcode: barcode,
+                    stock: 25
+                });
+
+            } else {
+
+                showAddBox(barcode);
+            }
+
+            return;
+        }
+
+
+        /*
+         * 正式查詢 Apps Script
+         */
+
+        try {
+
+            const url =
+                API_URL +
+                "?action=find" +
+                "&barcode=" +
+                encodeURIComponent(barcode);
+
+            const response = await fetch(url);
+
+            const data = await response.json();
+
+            loading.style.display = "none";
+
+
+            if (data.success && data.found) {
+
+                showProduct(data.product);
+
+            } else {
+
+                showAddBox(barcode);
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            loading.style.display = "none";
+
+            showMessage(
+                "查詢失敗，請確認 Apps Script 網址是否正確。"
+            );
+
+            // 允許重新掃描
+            scanned = false;
+        }
+    }
+
+
+    /*
+     * ==========================================
+     * 顯示已存在商品
+     * ==========================================
+     */
+
+    function showProduct(product) {
+
+        resultBox.style.display = "block";
+        addBox.style.display = "none";
+
+        productName.textContent =
+            product.name || "-";
+
+        productBarcode.textContent =
+            product.barcode || "-";
+
+        productStock.textContent =
+            product.stock ?? "-";
+    }
+
+
+    /*
+     * ==========================================
+     * 顯示新增商品
+     * ==========================================
+     */
+
+    function showAddBox(barcode) {
+
+        resultBox.style.display = "none";
+
+        addBox.style.display = "block";
+
+        newBarcode.value = barcode;
+
+        newProductName.value = "";
+
+        newStock.value = "0";
+
+        newProductName.focus();
+    }
+
+
+    /*
+     * ==========================================
+     * 新增商品
+     * ==========================================
+     */
+
+    addButton.addEventListener("click", async () => {
+
+        const barcode =
+            newBarcode.value.trim();
+
+        const name =
+            newProductName.value.trim();
+
+        const stock =
+            newStock.value.trim();
+
+
+        if (!barcode) {
+
+            showMessage("條碼不能為空。");
+            return;
+        }
+
+
+        if (!name) {
+
+            showMessage("請輸入商品名稱。");
+            return;
+        }
+
+
+        loading.textContent = "新增商品中...";
+        loading.style.display = "block";
+
+        hideMessage();
+
+
+        /*
+         * 尚未接 Apps Script 時，
+         * 先做前端測試。
+         */
+
+        if (
+            !API_URL ||
+            API_URL.includes("請把你的 Apps Script 網址")
+        ) {
+
+            setTimeout(() => {
+
+                loading.style.display = "none";
+
+                showProduct({
+                    name: name,
+                    barcode: barcode,
+                    stock: Number(stock) || 0
+                });
+
+                showMessage("測試成功：商品已新增。");
+
+            }, 500);
+
+            return;
+        }
+
+
+        /*
+         * 正式新增到 Google Sheet
+         */
+
+        try {
+
+            const url =
+                API_URL +
+                "?action=add" +
+                "&barcode=" +
+                encodeURIComponent(barcode) +
+                "&name=" +
+                encodeURIComponent(name) +
+                "&stock=" +
+                encodeURIComponent(stock);
+
+
+            const response =
+                await fetch(url);
+
+
+            const data =
+                await response.json();
+
+
+            loading.style.display = "none";
+
+
+            if (data.success) {
+
+                showProduct({
+                    name: name,
+                    barcode: barcode,
+                    stock: Number(stock) || 0
+                });
+
+                showMessage("商品新增成功。");
+
+            } else {
+
+                showMessage(
+                    data.message || "新增失敗。"
+                );
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            loading.style.display = "none";
+
+            showMessage(
+                "新增失敗，請確認 Apps Script。"
+            );
+        }
+
+    });
+
+
+    /*
+     * ==========================================
+     * 返回首頁
+     * ==========================================
+     */
+
+    backButton.addEventListener("click", async () => {
+
+        await stopScanner();
+
+        scannerPage.style.display = "none";
+        homePage.style.display = "flex";
+
+        resetResult();
+    });
+
+
+    /*
+     * ==========================================
+     * 停止掃描器
+     * ==========================================
+     */
+
+    async function stopScanner() {
+
+        if (
+            html5QrCode &&
+            scannerRunning
+        ) {
+
+            try {
+
+                await html5QrCode.stop();
+
+                html5QrCode.clear();
+
+            } catch (error) {
+
+                console.error(
+                    "停止相機失敗：",
+                    error
+                );
+            }
+
+            scannerRunning = false;
+        }
+    }
+
+
+    /*
+     * ==========================================
+     * 重設結果
+     * ==========================================
+     */
+
+    function resetResult() {
+
+        resultBox.style.display = "none";
+
+        addBox.style.display = "none";
+
+        loading.style.display = "none";
+
+        hideMessage();
+
+        productName.textContent = "-";
+        productBarcode.textContent = "-";
+        productStock.textContent = "-";
+
+        newBarcode.value = "";
+        newProductName.value = "";
+        newStock.value = "0";
+
+        scanned = false;
+    }
+
+
+    /*
+     * ==========================================
+     * 訊息
+     * ==========================================
+     */
+
+    function showMessage(text) {
+
+        message.textContent = text;
+
+        message.style.display = "block";
+    }
+
+
+    function hideMessage() {
+
+        message.style.display = "none";
+
+        message.textContent = "";
+    }
+</script>
+
+</body>
+</html>
+```

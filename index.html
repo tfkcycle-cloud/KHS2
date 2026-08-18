@@ -14,10 +14,7 @@
     <title>條碼庫存測試</title>
 
 
-    <!--
-        html5-qrcode
-        用來讓手機瀏覽器開啟相機並辨識條碼
-    -->
+    <!-- 條碼掃描套件 -->
     <script
         src="https://unpkg.com/html5-qrcode"
         type="text/javascript">
@@ -136,7 +133,7 @@
 
 
         /* =====================================
-           相機容器
+           相機
         ====================================== */
 
         .camera-wrapper {
@@ -154,10 +151,6 @@
             aspect-ratio: 3 / 4;
         }
 
-
-        /*
-            html5-qrcode 產生的內容
-        */
 
         #reader {
 
@@ -179,31 +172,32 @@
         }
 
 
-        /*
-            CSS 備援 zoom
-        */
+        /* =====================================
+           CSS Zoom 備援
+        ====================================== */
 
         .zoom-1 {
-
             transform: scale(1);
         }
 
 
-        .zoom-125 {
-
-            transform: scale(1.25);
-        }
-
-
-        .zoom-150 {
-
-            transform: scale(1.5);
-        }
-
-
-        .zoom-200 {
-
+        .zoom-2 {
             transform: scale(2);
+        }
+
+
+        .zoom-3 {
+            transform: scale(3);
+        }
+
+
+        .zoom-4 {
+            transform: scale(4);
+        }
+
+
+        .zoom-5 {
+            transform: scale(5);
         }
 
 
@@ -216,14 +210,13 @@
             position: absolute;
 
             top: 50%;
-
             left: 50%;
 
             width: 78%;
-
             height: 25%;
 
-            transform: translate(-50%, -50%);
+            transform:
+                translate(-50%, -50%);
 
             border: 2px solid #fff;
 
@@ -242,7 +235,6 @@
             position: absolute;
 
             left: 10%;
-
             right: 10%;
 
             top: 50%;
@@ -346,7 +338,7 @@
 
 
         /* =====================================
-           商品結果
+           商品資訊
         ====================================== */
 
         .result {
@@ -589,9 +581,7 @@
         </h1>
 
 
-        <!-- =================================
-             相機
-        ================================== -->
+        <!-- 相機 -->
 
         <div class="camera-wrapper">
 
@@ -614,6 +604,7 @@
 
         <div class="zoom-buttons">
 
+
             <button
                 class="zoom-button active"
                 data-zoom="1"
@@ -625,37 +616,45 @@
 
             <button
                 class="zoom-button"
-                data-zoom="1.25"
-                type="button"
-            >
-                1.25x
-            </button>
-
-
-            <button
-                class="zoom-button"
-                data-zoom="1.5"
-                type="button"
-            >
-                1.5x
-            </button>
-
-
-            <button
-                class="zoom-button"
                 data-zoom="2"
                 type="button"
             >
                 2x
             </button>
 
+
+            <button
+                class="zoom-button"
+                data-zoom="3"
+                type="button"
+            >
+                3x
+            </button>
+
+
+            <button
+                class="zoom-button"
+                data-zoom="4"
+                type="button"
+            >
+                4x
+            </button>
+
+
+            <button
+                class="zoom-button"
+                data-zoom="5"
+                type="button"
+            >
+                5x
+            </button>
+
+
         </div>
 
 
 
-        <!-- =================================
-             Loading
-        ================================== -->
+        <!-- Loading -->
 
         <div
             id="loading"
@@ -666,9 +665,7 @@
 
 
 
-        <!-- =================================
-             Message
-        ================================== -->
+        <!-- 訊息 -->
 
         <div
             id="message"
@@ -738,6 +735,7 @@
 
             </div>
 
+
         </div>
 
 
@@ -796,13 +794,12 @@
                 新增商品
             </button>
 
+
         </div>
 
 
 
-        <!-- =================================
-             返回
-        ================================== -->
+        <!-- 返回 -->
 
         <button
             id="backButton"
@@ -906,7 +903,6 @@
     let scannerRunning = false;
 
     let scanned = false;
-
 
 
     // ==========================================
@@ -1021,8 +1017,7 @@
 
 
             /*
-             * 等待 video 元素出現
-             * 再取得 Camera Track
+             * 等待 video 出現
              */
 
             setTimeout(
@@ -1047,7 +1042,7 @@
 
 
     // ==========================================
-    // 取得 Camera Track
+    // 準備 Camera Zoom
     // ==========================================
 
     async function prepareCameraZoom() {
@@ -1062,27 +1057,15 @@
 
             if (!video) {
 
-                console.log(
-                    "找不到 video 元素"
-                );
-
                 return;
             }
 
-
-            /*
-             * MediaStream
-             */
 
             const stream =
                 video.srcObject;
 
 
             if (!stream) {
-
-                console.log(
-                    "找不到 camera stream"
-                );
 
                 return;
             }
@@ -1094,10 +1077,6 @@
 
             if (!tracks.length) {
 
-                console.log(
-                    "找不到 video track"
-                );
-
                 return;
             }
 
@@ -1105,10 +1084,6 @@
             cameraTrack =
                 tracks[0];
 
-
-            /*
-             * 檢查手機是否支援 zoom
-             */
 
             const capabilities =
                 cameraTrack.getCapabilities();
@@ -1122,7 +1097,7 @@
 
 
                 console.log(
-                    "手機支援原生 Camera Zoom",
+                    "原生 Zoom 支援範圍：",
                     capabilities.zoom
                 );
 
@@ -1130,19 +1105,15 @@
 
                 nativeZoomSupported = false;
 
-
                 console.log(
-                    "手機不支援原生 Camera Zoom，使用 CSS Zoom"
+                    "使用 CSS Zoom"
                 );
 
             }
 
 
-            /*
-             * 預設 1x
-             */
-
             await setCameraZoom(1);
+
 
         } catch (error) {
 
@@ -1165,7 +1136,6 @@
         .querySelectorAll(".zoom-button")
         .forEach(button => {
 
-
             button.addEventListener(
                 "click",
                 async () => {
@@ -1180,10 +1150,6 @@
                         zoom
                     );
 
-
-                    /*
-                     * 更新按鈕
-                     */
 
                     document
                         .querySelectorAll(
@@ -1210,7 +1176,7 @@
 
 
     // ==========================================
-    // 設定 Camera Zoom
+    // 設定 Zoom
     // ==========================================
 
     async function setCameraZoom(
@@ -1226,12 +1192,9 @@
             );
 
 
-        /*
-         * --------------------------------------
-         * 方法一：
-         * 手機支援原生 zoom
-         * --------------------------------------
-         */
+        // --------------------------------------
+        // 原生相機 Zoom
+        // --------------------------------------
 
         if (
             nativeZoomSupported &&
@@ -1244,20 +1207,15 @@
                     cameraTrack.getCapabilities();
 
 
-                let min =
+                const min =
                     capabilities.zoom.min;
 
 
-                let max =
+                const max =
                     capabilities.zoom.max;
 
 
-                /*
-                 * 將 1 / 1.25 / 1.5 / 2
-                 * 限制在手機實際支援範圍
-                 */
-
-                let target =
+                const target =
                     Math.max(
                         min,
                         Math.min(
@@ -1281,23 +1239,19 @@
 
 
                 console.log(
-                    "原生 Zoom:",
+                    "Camera Zoom:",
                     target
                 );
 
-
-                /*
-                 * 原生 zoom 已經完成
-                 * 不需要 CSS zoom
-                 */
 
                 if (video) {
 
                     video.classList.remove(
                         "zoom-1",
-                        "zoom-125",
-                        "zoom-150",
-                        "zoom-200"
+                        "zoom-2",
+                        "zoom-3",
+                        "zoom-4",
+                        "zoom-5"
                     );
 
                 }
@@ -1309,7 +1263,7 @@
             } catch (error) {
 
                 console.warn(
-                    "原生 Zoom 失敗，改用 CSS Zoom",
+                    "原生 Zoom 失敗，使用 CSS Zoom",
                     error
                 );
 
@@ -1318,12 +1272,9 @@
         }
 
 
-        /*
-         * --------------------------------------
-         * 方法二：
-         * CSS Zoom 備援
-         * --------------------------------------
-         */
+        // --------------------------------------
+        // CSS Zoom
+        // --------------------------------------
 
         if (!video) {
 
@@ -1335,11 +1286,13 @@
 
             "zoom-1",
 
-            "zoom-125",
+            "zoom-2",
 
-            "zoom-150",
+            "zoom-3",
 
-            "zoom-200"
+            "zoom-4",
+
+            "zoom-5"
 
         );
 
@@ -1352,26 +1305,34 @@
 
         }
 
-        else if (zoom === 1.25) {
-
-            video.classList.add(
-                "zoom-125"
-            );
-
-        }
-
-        else if (zoom === 1.5) {
-
-            video.classList.add(
-                "zoom-150"
-            );
-
-        }
-
         else if (zoom === 2) {
 
             video.classList.add(
-                "zoom-200"
+                "zoom-2"
+            );
+
+        }
+
+        else if (zoom === 3) {
+
+            video.classList.add(
+                "zoom-3"
+            );
+
+        }
+
+        else if (zoom === 4) {
+
+            video.classList.add(
+                "zoom-4"
+            );
+
+        }
+
+        else if (zoom === 5) {
+
+            video.classList.add(
+                "zoom-5"
             );
 
         }
@@ -1387,10 +1348,6 @@
     async function onScanSuccess(
         decodedText
     ) {
-
-        /*
-         * 防止同一條碼連續觸發
-         */
 
         if (scanned) {
 
@@ -1441,9 +1398,7 @@
         error
     ) {
 
-        /*
-         * 不需要顯示
-         */
+        // 不顯示連續掃描錯誤
 
     }
 
@@ -1458,11 +1413,9 @@
     ) {
 
 
-        /*
-         * --------------------------------------
-         * 測試模式
-         * --------------------------------------
-         */
+        // --------------------------------------
+        // 測試模式
+        // --------------------------------------
 
         if (
 
@@ -1479,14 +1432,9 @@
                 "none";
 
 
-            /*
-             * 測試資料
-             */
-
             if (
                 barcode === "123456789"
             ) {
-
 
                 showProduct({
 
@@ -1498,13 +1446,11 @@
 
                 });
 
-
             }
 
             else if (
                 barcode === "987654321"
             ) {
-
 
                 showProduct({
 
@@ -1516,11 +1462,9 @@
 
                 });
 
-
             }
 
             else {
-
 
                 showAddBox(
                     barcode
@@ -1535,14 +1479,11 @@
 
 
 
-        /*
-         * --------------------------------------
-         * 正式 Apps Script
-         * --------------------------------------
-         */
+        // --------------------------------------
+        // Apps Script
+        // --------------------------------------
 
         try {
-
 
             const url =
 
@@ -1574,16 +1515,13 @@
                 data.found
             ) {
 
-
                 showProduct(
                     data.product
                 );
 
-
             }
 
             else {
-
 
                 showAddBox(
                     barcode
@@ -1594,10 +1532,7 @@
 
         } catch (error) {
 
-
-            console.error(
-                error
-            );
+            console.error(error);
 
 
             loading.style.display =
@@ -1625,7 +1560,6 @@
         product
     ) {
 
-
         resultBox.style.display =
             "block";
 
@@ -1650,13 +1584,12 @@
 
 
     // ==========================================
-    // 顯示新增
+    // 顯示新增商品
     // ==========================================
 
     function showAddBox(
         barcode
     ) {
-
 
         resultBox.style.display =
             "none";
@@ -1699,7 +1632,6 @@
         "click",
         async () => {
 
-
             const barcode =
                 newBarcode.value.trim();
 
@@ -1710,7 +1642,6 @@
 
             const stock =
                 newStock.value.trim();
-
 
 
             if (!barcode) {
@@ -1733,7 +1664,6 @@
             }
 
 
-
             loading.textContent =
                 "新增商品中...";
 
@@ -1746,11 +1676,9 @@
 
 
 
-            /*
-             * ----------------------------------
-             * 測試模式
-             * ----------------------------------
-             */
+            // ----------------------------------
+            // 測試模式
+            // ----------------------------------
 
             if (
 
@@ -1765,7 +1693,6 @@
 
                 setTimeout(
                     () => {
-
 
                         loading.style.display =
                             "none";
@@ -1799,14 +1726,11 @@
 
 
 
-            /*
-             * ----------------------------------
-             * 正式新增
-             * ----------------------------------
-             */
+            // ----------------------------------
+            // 正式新增
+            // ----------------------------------
 
             try {
-
 
                 const url =
 
@@ -1845,10 +1769,7 @@
                     "none";
 
 
-                if (
-                    data.success
-                ) {
-
+                if (data.success) {
 
                     showProduct({
 
@@ -1866,11 +1787,9 @@
                         "商品新增成功。"
                     );
 
-
                 }
 
                 else {
-
 
                     showMessage(
 
@@ -1884,10 +1803,7 @@
 
             } catch (error) {
 
-
-                console.error(
-                    error
-                );
+                console.error(error);
 
 
                 loading.style.display =
@@ -1913,7 +1829,6 @@
         "click",
         async () => {
 
-
             await stopScanner();
 
 
@@ -1938,27 +1853,18 @@
 
     async function stopScanner() {
 
-
         if (
-
             html5QrCode &&
-
             scannerRunning
-
         ) {
-
 
             try {
 
-
                 await html5QrCode.stop();
-
 
                 html5QrCode.clear();
 
-
             } catch (error) {
-
 
                 console.error(
                     "停止相機失敗：",
@@ -1990,7 +1896,6 @@
     // ==========================================
 
     function resetResult() {
-
 
         resultBox.style.display =
             "none";
@@ -2054,6 +1959,7 @@
                         "active"
                     );
 
+
                     if (
                         button.dataset.zoom === "1"
                     ) {
@@ -2079,7 +1985,6 @@
         text
     ) {
 
-
         message.textContent =
             text;
 
@@ -2090,9 +1995,7 @@
     }
 
 
-
     function hideMessage() {
-
 
         message.style.display =
             "none";
